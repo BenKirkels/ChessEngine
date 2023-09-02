@@ -1,0 +1,15 @@
+c:\Users\benki\ChessEngine\bin\Debug\net7.0\ChessEngine.exe
+c:\Users\benki\ChessEngine\bin\Debug\net7.0\ChessEngine.deps.json
+c:\Users\benki\ChessEngine\bin\Debug\net7.0\ChessEngine.runtimeconfig.json
+c:\Users\benki\ChessEngine\bin\Debug\net7.0\ChessEngine.dll
+c:\Users\benki\ChessEngine\bin\Debug\net7.0\ChessEngine.pdb
+c:\Users\benki\ChessEngine\obj\Debug\net7.0\ChessEngine.csproj.AssemblyReference.cache
+c:\Users\benki\ChessEngine\obj\Debug\net7.0\ChessEngine.GeneratedMSBuildEditorConfig.editorconfig
+c:\Users\benki\ChessEngine\obj\Debug\net7.0\ChessEngine.AssemblyInfoInputs.cache
+c:\Users\benki\ChessEngine\obj\Debug\net7.0\ChessEngine.AssemblyInfo.cs
+c:\Users\benki\ChessEngine\obj\Debug\net7.0\ChessEngine.csproj.CoreCompileInputs.cache
+c:\Users\benki\ChessEngine\obj\Debug\net7.0\ChessEngine.dll
+c:\Users\benki\ChessEngine\obj\Debug\net7.0\refint\ChessEngine.dll
+c:\Users\benki\ChessEngine\obj\Debug\net7.0\ChessEngine.pdb
+c:\Users\benki\ChessEngine\obj\Debug\net7.0\ChessEngine.genruntimeconfig.cache
+c:\Users\benki\ChessEngine\obj\Debug\net7.0\ref\ChessEngine.dll
