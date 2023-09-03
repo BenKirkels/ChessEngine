@@ -17,10 +17,10 @@ namespace Chess
                 throw new ArgumentException("Invalid FEN string: Piece placement is incomplete");
 
             ulong[] bitboards = new ulong[12];
-            for (int i = 0; i < 8; i++)
+            for (int i = 0, rank = 7; i < 8; i++, rank--)
             {
                 int file = 0;
-                foreach (char c in ranks[i])
+                foreach (char c in ranks[rank])
                 {
                     if (c >= '1' && c <= '8')
                     {

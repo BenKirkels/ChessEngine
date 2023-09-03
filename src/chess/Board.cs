@@ -1,3 +1,4 @@
+using System.Text;
 using chess;
 
 namespace Chess
@@ -31,7 +32,7 @@ namespace Chess
         /// Store the data that is not easily reversible.
         /// </summary>
         private Stack<GameState> previousGameStates;
-        private GameState gameState;
+        public GameState gameState;
         public ulong GetPieceBitboard(PieceType piece, bool whitePiece)
         {
             return bitboards[(int)piece + (whitePiece ? 0 : 6)];
@@ -80,8 +81,10 @@ namespace Chess
 
             // Ply count
             // The fen string contains the number of the full moves
-            board.plyCount = 2 * int.Parse(fenParts[5]) + (board.whiteToMove ? 0 : 1);
+            board.plyCount = 2 * (int.Parse(fenParts[5]) - 1) + (board.whiteToMove ? 0 : 1);
             return board;
         }
+
+
     }
 }
