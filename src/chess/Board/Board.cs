@@ -13,29 +13,30 @@ namespace Chess;
 /// </summary>
 public class Board
 {
-    /// <summary>
-    /// The bitboards for each piece type and color.
-    /// The first 6 are for white pieces, the last 6 are for black pieces.
-    /// The order is: pawns, knights, bishops, rooks, queens, kings.
-    /// </summary>
-    private ulong[] bitboards = new ulong[12];
+    private MoveGen moveGenerator = new();
+    public ulong[] pieceBitboards;
+    public ulong[] colorBitboards;
+    public ulong allPiecesBitboard;
 
-    /// <summary>
-    /// The number of half moves played
-    /// </summary>
-    public int plyCount { get; private set; }
+    public ulong enPassantSquare => BitBoardHelper.Index(gameState.enPassantSquare);
 
-    public bool whiteToMove { get; private set; }
+    public int plyCount;
+
+    public bool whiteToMove;
+    public int myColor => whiteToMove ? Piece.WHITE : Piece.BLACK;
+    public int opponentColor => whiteToMove ? Piece.BLACK : Piece.WHITE;
+
 
     /// <summary>
     /// Store the data that is not easily reversible.
     /// </summary>
     private Stack<GameState> previousGameStates;
     public GameState gameState;
-    public ulong GetPieceBitboard(PieceType piece, bool whitePiece)
-    {
-        return bitboards[(int)piece - 1 + (whitePiece ? 0 : 6)];
-    }
+
+    public void GetLegalMoves(ref Span<Move> moves, bool ignoreQuietMoves = false) => moveGenerator.GenerateMoves(ref moves, this, ignoreQuietMoves);
+
+    public bool PieceAtSquare(int piece, int square) => (pieceBitboards[piece] &= BitBoardHelper.Index(square)) != 0;
+
 
     /// <summary>
     /// Initializes a new instance of the <c> Board </c> class.
@@ -66,7 +67,7 @@ public class Board
         ulong zobristKey = Zobrist.GenerateZobristKey(bitboards, castlingRights, enPassantSquare, whiteToMove);
 
 
-        board.bitboards = bitboards;
+        board.pieceBitboards = bitboards;
         board.gameState = new GameState(
             castlingRights,
             enPassantSquare,

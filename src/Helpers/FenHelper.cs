@@ -16,11 +16,11 @@ public static class FenHelper
         if (ranks.Length != 8)
             throw new ArgumentException("Invalid FEN string: Piece placement is incomplete");
 
-        ulong[] bitboards = new ulong[12];
-        for (int i = 0, rank = 7; i < 8; i++, rank--)
+        ulong[] bitboards = new ulong[Piece.MAX_PIECE_NUMBER];
+        for (int rank = 0, i = 7; rank < 8; rank++, i--)
         {
             int file = 0;
-            foreach (char c in ranks[rank])
+            foreach (char c in ranks[i])
             {
                 if (c >= '1' && c <= '8')
                 {
@@ -28,19 +28,19 @@ public static class FenHelper
                 }
                 else
                 {
-                    PieceType piece = char.ToLower(c) switch
+                    int piece = char.ToLower(c) switch
                     {
-                        'p' => PieceType.Pawn,
-                        'n' => PieceType.Knight,
-                        'b' => PieceType.Bishop,
-                        'r' => PieceType.Rook,
-                        'q' => PieceType.Queen,
-                        'k' => PieceType.King,
+                        'p' => Piece.PAWN,
+                        'n' => Piece.KNIGHT,
+                        'b' => Piece.BISHOP,
+                        'r' => Piece.ROOK,
+                        'q' => Piece.QUEEN,
+                        'k' => Piece.KING,
                         _ => throw new ArgumentException("Invalid FEN string: Invalid character in piece placement"),
                     };
                     // ASCII code for a-z is 97-122, for A-Z is 65-90
                     // If the character is lowercase (>= 'a'), the piece is black, otherwise it is white
-                    bitboards[(int)piece + (c >= 'a' ? 6 : 0)] |= 1UL << (i * 8 + file);
+                    bitboards[Piece.MakePiece(piece, c < 'a')] |= 1UL << (rank * 8 + file);
                     file++;
                 }
             }
