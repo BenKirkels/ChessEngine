@@ -13,7 +13,9 @@ namespace Chess;
 /// </summary>
 public class Board
 {
-    private MoveGen moveGenerator = new();
+    const int WHITE_INDEX = 0;
+    const int BLACK_INDEX = 1;
+    private MoveGen moveGenerator;
     public ulong[] pieceBitboards;
     public ulong[] colorBitboards;
     public ulong allPiecesBitboard;
@@ -24,7 +26,9 @@ public class Board
 
     public bool whiteToMove;
     public int myColor => whiteToMove ? Piece.WHITE : Piece.BLACK;
+    public int myColorIndex => whiteToMove ? WHITE_INDEX : BLACK_INDEX;
     public int opponentColor => whiteToMove ? Piece.BLACK : Piece.WHITE;
+    public int opponentColorIndex => whiteToMove ? BLACK_INDEX : WHITE_INDEX;
 
 
     /// <summary>
@@ -33,10 +37,26 @@ public class Board
     private Stack<GameState> previousGameStates;
     public GameState gameState;
 
-    public void GetLegalMoves(ref Span<Move> moves, bool ignoreQuietMoves = false) => moveGenerator.GenerateMoves(ref moves, this, ignoreQuietMoves);
+    public void GetLegalMoves(ref Span<Move> moves, bool generateQuietMoves = true) => moveGenerator.GenerateMoves(ref moves, this, generateQuietMoves);
 
     public bool PieceAtSquare(int piece, int square) => (pieceBitboards[piece] &= BitBoardHelper.Index(square)) != 0;
 
+
+    public Board(ulong[] BitBoards, bool whiteToMove, GameState gameState, int plyCount)
+    {
+        moveGenerator = new MoveGen();
+        previousGameStates = new Stack<GameState>();
+
+        pieceBitboards = BitBoards;
+        colorBitboards = new ulong[2];
+        colorBitboards[WHITE_INDEX] = BitBoards[Piece.WHITE_PAWN] | BitBoards[Piece.WHITE_KNIGHT] | BitBoards[Piece.WHITE_BISHOP] | BitBoards[Piece.WHITE_ROOK] | BitBoards[Piece.WHITE_QUEEN] | BitBoards[Piece.WHITE_KING];
+        colorBitboards[BLACK_INDEX] = BitBoards[Piece.BLACK_PAWN] | BitBoards[Piece.BLACK_KNIGHT] | BitBoards[Piece.BLACK_BISHOP] | BitBoards[Piece.BLACK_ROOK] | BitBoards[Piece.BLACK_QUEEN] | BitBoards[Piece.BLACK_KING];
+        allPiecesBitboard = colorBitboards[WHITE_INDEX] | colorBitboards[BLACK_INDEX];
+
+        this.whiteToMove = whiteToMove;
+        this.gameState = gameState;
+        this.plyCount = plyCount;
+    }
 
     /// <summary>
     /// Initializes a new instance of the <c> Board </c> class.
@@ -46,7 +66,6 @@ public class Board
     /// <exception cref="ArgumentException"></exception>
     public static Board CreateBoardFromFen(string fen)
     {
-        Board board = new();
         string[] fenParts = fen.Split(' ');
         if (fenParts.Length != 6)
             throw new ArgumentException("Invalid FEN string: not all parts are present");
@@ -66,20 +85,18 @@ public class Board
         // Zobrist key
         ulong zobristKey = Zobrist.GenerateZobristKey(bitboards, castlingRights, enPassantSquare, whiteToMove);
 
-
-        board.pieceBitboards = bitboards;
-        board.gameState = new GameState(
+        GameState gameState = new GameState(
             castlingRights,
             enPassantSquare,
             zobristKey,
             // 50 move counter
             fenParts[4] == "-" ? 0 : int.Parse(fenParts[4])
         );
-        board.whiteToMove = whiteToMove;
 
         // Ply count
         // The fen string contains the number of the full moves
-        board.plyCount = 2 * (int.Parse(fenParts[5]) - 1) + (board.whiteToMove ? 0 : 1);
+        int plyCount = 2 * (int.Parse(fenParts[5]) - 1) + (whiteToMove ? 0 : 1);
+        Board board = new Board(bitboards, whiteToMove, gameState, plyCount);
         return board;
     }
 

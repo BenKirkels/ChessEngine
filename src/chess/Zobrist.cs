@@ -54,7 +54,7 @@ public static class Zobrist
     }
 
     /// <returns> A random 64-bit number </returns>
-    private static ulong Random64bitNumber(Random random)
+    public static ulong Random64bitNumber(Random random)
     {
         byte[] buffer = new byte[8];
         random.NextBytes(buffer);

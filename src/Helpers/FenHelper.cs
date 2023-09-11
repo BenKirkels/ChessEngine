@@ -16,7 +16,7 @@ public static class FenHelper
         if (ranks.Length != 8)
             throw new ArgumentException("Invalid FEN string: Piece placement is incomplete");
 
-        ulong[] bitboards = new ulong[Piece.MAX_PIECE_NUMBER];
+        ulong[] bitboards = new ulong[Piece.MAX_PIECE_NUMBER + 1];
         for (int rank = 0, i = 7; rank < 8; rank++, i--)
         {
             int file = 0;

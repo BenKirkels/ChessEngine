@@ -8,30 +8,10 @@ public static class BitBoardHelper
     public static ulong Rank(int rank) => rank1 << (rank * 8);
     public static ulong File(int file) => fileA << file;
 
-    public static ulong pawnAttacks(int index, bool whitePiece)
-    {
-        ulong bitboard = 0;
-        int rank = BoardHelper.IndexToRank(index);
-        if (whitePiece)
-        {
-            if (rank != 0)
-                bitboard |= Index(index + 7);
-            if (rank != 7)
-                bitboard |= Index(index + 9);
-        }
-        else
-        {
-            if (rank != 0)
-                bitboard |= Index(index - 9);
-            if (rank != 7)
-                bitboard |= Index(index - 7);
-        }
-        return bitboard;
-    }
     public static int ClearAndGetIndexOfLSB(ref ulong bitboard)
     {
         int index = BitOperations.TrailingZeroCount(bitboard);
-        ToggleBit(ref bitboard, index);
+        ToggleIndex(ref bitboard, index);
         return index;
     }
 
@@ -40,9 +20,14 @@ public static class BitBoardHelper
     /// </summary>
     /// <param name="bitboard"></param>
     /// <param name="index"></param>
-    public static void ToggleBit(ref ulong bitboard, int index)
+    public static void ToggleIndex(ref ulong bitboard, int index)
     {
         bitboard ^= 1UL << index;
+    }
+
+    public static void SetIndex(ref ulong bitboard, int index)
+    {
+        bitboard |= 1UL << index;
     }
 
     /// <summary>
@@ -65,12 +50,59 @@ public static class BitBoardHelper
     {
         return 1UL << index;
     }
-
-    /// <summary>
-    /// Generate a bitboard with all bits moves x ranks higher.
-    /// </summary>
-    public static ulong MoveXSquaresForward(ulong bitboard, bool whitePiece, int x)
+    public static ulong Index(int rank, int file)
     {
-        return whitePiece ? bitboard << 8 * x : bitboard >> 8 * x;
+        return 1UL << (rank * 8 + file);
+    }
+
+    public static bool IsBitSet(ulong bitboard, int index)
+    {
+        return (bitboard & (1UL << index)) != 0;
+    }
+
+    public static ulong pawnAttacks(int index, bool whitePiece)
+    {
+        ulong bitboard = 0;
+        int file = BoardHelper.IndexToFile(index);
+        if (whitePiece)
+        {
+            if (file != 0)
+                bitboard |= Index(index + 7);
+            if (file != 7)
+                bitboard |= Index(index + 9);
+        }
+        else
+        {
+            if (file != 0)
+                bitboard |= Index(index - 9);
+            if (file != 7)
+                bitboard |= Index(index - 7);
+        }
+        return bitboard;
+    }
+
+    public static ulong KnightMoves(int index)
+    {
+        ulong bitboard = 0;
+        Square startSquare = new Square(index);
+
+        Square[] moves = new Square[] {
+            new Square(1, 2),
+            new Square(2, 1),
+            new Square(2, -1),
+            new Square(1, -2),
+            new Square(-1, -2),
+            new Square(-2, -1),
+            new Square(-2, 1),
+            new Square(-1, 2)
+        };
+
+        foreach (Square move in moves)
+        {
+            Square targetSquare = startSquare + move;
+            if (targetSquare.IsValid)
+                SetIndex(ref bitboard, targetSquare.index);
+        }
+        return bitboard;
     }
 }
