@@ -1,4 +1,4 @@
-using System.Text;
+
 
 namespace Chess;
 
@@ -15,21 +15,23 @@ public class Board
 {
     const int WHITE_INDEX = 0;
     const int BLACK_INDEX = 1;
-    private MoveGen moveGenerator;
+    private readonly MoveGen moveGenerator;
     public ulong[] pieceBitboards;
     public ulong[] colorBitboards;
     public ulong allPiecesBitboard;
 
-    public ulong enPassantSquare => BitBoardHelper.Index(gameState.enPassantSquare);
+    public int EnPassantFile => gameState.enPassantFile;
 
     public int plyCount;
 
     public bool whiteToMove;
-    public int myColor => whiteToMove ? Piece.WHITE : Piece.BLACK;
-    public int myColorIndex => whiteToMove ? WHITE_INDEX : BLACK_INDEX;
-    public int opponentColor => whiteToMove ? Piece.BLACK : Piece.WHITE;
-    public int opponentColorIndex => whiteToMove ? BLACK_INDEX : WHITE_INDEX;
+    public int MyColor => whiteToMove ? Piece.WHITE : Piece.BLACK;
+    public int MyColorIndex => whiteToMove ? WHITE_INDEX : BLACK_INDEX;
+    public int OpponentColor => whiteToMove ? Piece.BLACK : Piece.WHITE;
+    public int OpponentColorIndex => whiteToMove ? BLACK_INDEX : WHITE_INDEX;
 
+    public bool CanCastleKingSide => gameState.CanCastleKingSide(whiteToMove);
+    public bool CanCastleQueenSide => gameState.CanCastleQueenSide(whiteToMove);
 
     /// <summary>
     /// Store the data that is not easily reversible.
@@ -39,7 +41,8 @@ public class Board
 
     public void GetLegalMoves(ref Span<Move> moves, bool generateQuietMoves = true) => moveGenerator.GenerateMoves(ref moves, this, generateQuietMoves);
 
-    public bool PieceAtSquare(int piece, int square) => (pieceBitboards[piece] &= BitBoardHelper.Index(square)) != 0;
+    public bool PieceAtSquare(int square, int piece) => (pieceBitboards[piece] &= BitBoardHelper.Index(square)) != 0;
+    public bool PieceAtSquare(int square) => BitBoardHelper.IsBitSet(allPiecesBitboard, square);
 
 
     public Board(ulong[] BitBoards, bool whiteToMove, GameState gameState, int plyCount)
@@ -80,14 +83,14 @@ public class Board
         int castlingRights = FenHelper.CastlingRights(fenParts[2]);
 
         // En passant square
-        int enPassantSquare = FenHelper.EnPassantSquare(fenParts[3]);
+        int enPassantFile = FenHelper.EnPassantFile(fenParts[3]);
 
         // Zobrist key
-        ulong zobristKey = Zobrist.GenerateZobristKey(bitboards, castlingRights, enPassantSquare, whiteToMove);
+        ulong zobristKey = Zobrist.GenerateZobristKey(bitboards, castlingRights, enPassantFile, whiteToMove);
 
         GameState gameState = new GameState(
             castlingRights,
-            enPassantSquare,
+            enPassantFile,
             zobristKey,
             // 50 move counter
             fenParts[4] == "-" ? 0 : int.Parse(fenParts[4])

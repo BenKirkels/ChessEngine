@@ -8,12 +8,12 @@ public static class MagicHelper
     public static ulong GenerateSliderMask(int index, bool rookMoves)
     {
         ulong mask = 0;
-        Square[] directions = rookMoves ? BoardHelper.rookDirections : BoardHelper.bishopDirections;
+        Square[] directions = rookMoves ? Square.rookDirections : Square.bishopDirections;
 
         Square startSquare = new Square(index);
 
         foreach (Square dir in directions)
-            for (int dist = 1; dist < 7; dist++)
+            for (int dist = 1; dist < 8; dist++)
             {
                 Square targetSquare = startSquare + dir * dist;
                 // use nextSquare to ignore the last square at the edge of the board
@@ -30,12 +30,12 @@ public static class MagicHelper
     public static ulong SliderMoves(int index, ulong blockers, bool rookMoves)
     {
         ulong moves = 0;
-        Square[] directions = rookMoves ? BoardHelper.rookDirections : BoardHelper.bishopDirections;
+        Square[] directions = rookMoves ? Square.rookDirections : Square.bishopDirections;
 
         Square startSquare = new Square(index);
 
         foreach (Square dir in directions)
-            for (int dist = 1; dist < 7; dist++)
+            for (int dist = 1; dist < 8; dist++)
             {
                 Square targetSquare = startSquare + dir * dist;
                 if (targetSquare.IsValid)

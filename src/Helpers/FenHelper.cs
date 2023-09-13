@@ -92,7 +92,7 @@ public static class FenHelper
     /// <returns> <para> index of the en passent square </para>
     ///           <para> -1 if there is no en passant square </para>
     /// </returns>
-    public static int EnPassantSquare(string enPassantSquare)
+    public static int EnPassantFile(string enPassantSquare)
     {
         if (enPassantSquare == "-")
             return -1;
@@ -102,6 +102,6 @@ public static class FenHelper
         int rank = enPassantSquare[1] - '1';
         if (file < 0 || file > 7 || rank < 0 || rank > 7)
             throw new ArgumentException("Invalid FEN string: Invalid en passant square");
-        return rank * 8 + file;
+        return file;
     }
 }

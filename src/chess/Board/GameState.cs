@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace Chess;
 
 
@@ -17,10 +19,10 @@ public readonly struct GameState
     public readonly int castlingRights;
 
     /// <summary>
-    /// The en passant square is represented by its index.
+    /// Stores the file of the en passant square.
     /// </summary>
     /// <remarks> -1 if there is no en passant square. </remarks>
-    public readonly int enPassantSquare;
+    public readonly int enPassantFile;
 
     /// <summary>
     /// The zobrist key is a 64-bit number that represents the state of the game.
@@ -38,12 +40,22 @@ public readonly struct GameState
     /// Initializes a new instance of the <c> GameState </c> struct.
     /// </summary>
     /// <param name="castlingRights">4 bit short (wk wq bk bq)</param>
-    /// <param name="enPassantSquare">Index of the en passant square</param>
-    public GameState(int castlingRights, int enPassantSquare, ulong zobristKey, int fiftyMoveCounter)
+    /// <param name="enPassantFile">File of the en passant square</param>
+    public GameState(int castlingRights, int enPassantFile, ulong zobristKey, int fiftyMoveCounter)
     {
         this.castlingRights = castlingRights;
-        this.enPassantSquare = enPassantSquare;
+        this.enPassantFile = enPassantFile;
         this.zobristKey = zobristKey;
         this.fiftyMoveCounter = fiftyMoveCounter;
+    }
+
+    public bool CanCastleKingSide(bool whiteToMove)
+    {
+        return (castlingRights & (whiteToMove ? 0b1000 : 0b10)) != 0;
+    }
+
+    public bool CanCastleQueenSide(bool whiteToMove)
+    {
+        return (castlingRights & (whiteToMove ? 0b100 : 0b1)) != 0;
     }
 }
