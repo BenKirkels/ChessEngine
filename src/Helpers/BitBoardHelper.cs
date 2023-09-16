@@ -1,6 +1,8 @@
 using System.Numerics;
+using Chess;
+using MoveGeneration;
 
-namespace Chess;
+namespace Helpers;
 public static class BitBoardHelper
 {
     public const ulong rank1 = 0xFF;
@@ -19,12 +21,25 @@ public static class BitBoardHelper
     public const ulong fileF = 0x2020202020202020;
     public const ulong fileG = 0x4040404040404040;
     public const ulong fileH = 0x8080808080808080;
-    private const ulong diagonal = 0x8040201008040201;
-    private const ulong antiDiagonal = 0x0102040810204080;
     public static ulong Rank(int rank) => rank1 << (rank * 8);
     public static ulong File(int file) => fileA << file;
-    public static ulong Diagonal(int shiftRight) => diagonal << shiftRight;
-    public static ulong AnitDiagonal(int shiftRight) => antiDiagonal << shiftRight;
+    public static ulong Diagonal(Square troughSquare, bool AntiDiagonal = false)
+    {
+        ulong result = 0;
+        Square ofset = AntiDiagonal ? new(1, -1) : new(1, 1);
+        for (int dir = -1; dir <= 1; dir += 2)
+        {
+            for (int dist = 1; dist <= 8; dist++)
+            {
+                Square targetSquare = troughSquare + ofset * dist * dir;
+                if (targetSquare.IsValid)
+                    SetIndex(ref result, targetSquare.index);
+                else
+                    break;
+            }
+        }
+        return result;
+    }
 
     public static int ClearAndGetIndexOfLSB(ref ulong bitboard)
     {
@@ -86,6 +101,13 @@ public static class BitBoardHelper
         return (bitboard & (1UL << index)) != 0;
     }
 
+    public static ulong shiftLeft(ulong bitboard, int shift)
+    {
+        if (shift >= 0)
+            return bitboard << shift;
+        else
+            return bitboard >> -shift;
+    }
     public static ulong pawnAttacks(int index, bool whitePiece)
     {
         ulong bitboard = 0;
@@ -136,7 +158,7 @@ public static class BitBoardHelper
         ulong result = 0;
         Square startSquare = new Square(index);
 
-        Square[] moves = Square.rookDirections.Concat(Square.bishopDirections).ToArray();
+        Square[] moves = Square.directions;
 
         foreach (Square move in moves)
         {
@@ -156,8 +178,8 @@ public static class BitBoardHelper
 
         if (direction.IsHorizontal) return Rank(squareA.rank);
         if (direction.IsVertical) return File(squareA.file);
-        if (direction.IsDiagonal) return Diagonal(squareA.file - squareA.rank);
-        if (direction.IsAntiDiagonal) return Diagonal(squareA.rank - squareA.file);
+        if (direction.IsDiagonal) return Diagonal(squareA);
+        if (direction.IsAntiDiagonal) return Diagonal(squareA, true);
 
         return 0;
     }

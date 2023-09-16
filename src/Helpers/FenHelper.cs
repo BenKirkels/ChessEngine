@@ -1,6 +1,6 @@
-using System;
+using Chess;
 
-namespace Chess;
+namespace Helpers;
 
 public static class FenHelper
 {

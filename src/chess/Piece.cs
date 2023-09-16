@@ -35,4 +35,6 @@ public static class Piece
 
     public static int MakePiece(int pieceType, int color) => pieceType | color;
     public static int MakePiece(int pieceType, bool whitePiece) => pieceType | (whitePiece ? WHITE : BLACK);
+
+    public static int PieceType(int piece) => piece & PIECE_TYPE_MASK;
 }

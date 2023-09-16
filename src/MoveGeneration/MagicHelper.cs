@@ -1,6 +1,8 @@
 using System.Numerics;
+using Chess;
+using Helpers;
 
-namespace Chess;
+namespace MoveGeneration;
 
 public static class MagicHelper
 {

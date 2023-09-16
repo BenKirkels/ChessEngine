@@ -1,3 +1,5 @@
+using Helpers;
+
 namespace Chess;
 
 public readonly struct Move
@@ -7,6 +9,8 @@ public readonly struct Move
     // s: from square (6bits)
     // t: to square (6bits)
     readonly ushort moveData;
+
+    public const int SIZE_OF_MOVE = sizeof(ushort);
 
     // Masks
     public const ushort FLAG_MASK = 0b1111_000000_000000;
@@ -42,10 +46,77 @@ public readonly struct Move
         moveData = (ushort)((flag << 12) | (from << 6) | to);
     }
 
+    public Move(string move, int flag)
+    {
+        string from = move.Substring(0, 2);
+        string to = move.Substring(2, 2);
+        moveData = (ushort)((flag << 12) | (BoardHelper.UCIToIndex(from) << 6) | BoardHelper.UCIToIndex(to));
+    }
+
+    public Move(string move, Board board)
+    {
+        string from = move.Substring(0, 2);
+        string to = move.Substring(2, 2);
+
+        int fromIndex = BoardHelper.UCIToIndex(from);
+        int toIndex = BoardHelper.UCIToIndex(to);
+
+        int movedPiece = board.PieceAtSquare(fromIndex);
+        int capturedPiece = board.PieceAtSquare(toIndex);
+
+        int flag = QUIET_MOVE;
+
+        // Promotion
+        if (move.Length == 5)
+        {
+            switch (move[4])
+            {
+                case 'q':
+                    flag = QUEEN_PROMOTION;
+                    break;
+                case 'n':
+                    flag = KNIGHT_PROMOTION;
+                    break;
+                case 'b':
+                    flag = BISHOP_PROMOTION;
+                    break;
+                case 'r':
+                    flag = ROOK_PROMOTION;
+                    break;
+            }
+        }
+
+        // Capture
+        if (capturedPiece != Piece.NONE)
+        {
+            flag |= CAPTURE;
+        }
+
+        // En passant
+        if (movedPiece == Piece.PAWN && capturedPiece == Piece.NONE && BoardHelper.IndexToFile(fromIndex) != BoardHelper.IndexToFile(toIndex))
+        {
+            flag = EN_PASSANT;
+        }
+
+        // Double pawn push
+        if (movedPiece == Piece.PAWN && Math.Abs(fromIndex - toIndex) == 16)
+        {
+            flag = DOUBLE_PAWN_PUSH;
+        }
+
+        // Castling
+        if (movedPiece == Piece.KING && Math.Abs(fromIndex - toIndex) == 2)
+        {
+            flag = BoardHelper.IndexToFile(toIndex) == 2 ? QUEEN_CASTLE : KING_CASTLE;
+        }
+
+        moveData = (ushort)((flag << 12) | (fromIndex << 6) | toIndex);
+    }
+
     public int value => moveData;
     public int flag => (moveData & FLAG_MASK) >> 12;
-    public int moveFrom => (moveData & FROM_MASK) >> 6;
-    public int moveTo => moveData & TO_MASK;
+    public int from => (moveData & FROM_MASK) >> 6;
+    public int to => moveData & TO_MASK;
 
     public bool isPromotion => (flag & PROMOTION_MASK) != 0;
     public bool isEnPassant => flag == EN_PASSANT;
@@ -67,7 +138,7 @@ public readonly struct Move
 
     public override string ToString()
     {
-        string moveString = BoardHelper.IndexToUCI(moveFrom) + BoardHelper.IndexToUCI(moveTo);
+        string moveString = BoardHelper.IndexToUCI(from) + BoardHelper.IndexToUCI(to);
         if (isPromotion)
             moveString += promotionPieceType switch
             {

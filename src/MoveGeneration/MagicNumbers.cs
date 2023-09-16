@@ -1,4 +1,4 @@
-namespace Chess;
+namespace MoveGeneration;
 
 public static class MagicNumbers
 {

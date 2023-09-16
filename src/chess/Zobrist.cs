@@ -1,3 +1,5 @@
+using Helpers;
+
 namespace Chess;
 /// <summary>
 /// Class <c> Zobrist </c> can be used to generate a zobrist key for a given board.

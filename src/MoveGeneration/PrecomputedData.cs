@@ -1,27 +1,33 @@
-namespace Chess;
+using Chess;
+using Helpers;
+
+namespace MoveGeneration;
 
 public static class PrecomputedData
 {
-    static ulong[] whitePawnAttacks = new ulong[64];
-    static ulong[] blackPawnAttacks = new ulong[64];
-    public static ulong pawnAttacks(int index, bool whitePiece) => whitePiece ? whitePawnAttacks[index] : blackPawnAttacks[index];
-    public static ulong pawnAttacks(int index, int color) => color == Piece.WHITE ? whitePawnAttacks[index] : blackPawnAttacks[index];
+    static readonly ulong[] whitePawnAttacks = new ulong[64];
+    static readonly ulong[] blackPawnAttacks = new ulong[64];
+    public static ulong PawnAttacks(int index, bool whitePiece) => whitePiece ? whitePawnAttacks[index] : blackPawnAttacks[index];
+    public static ulong PawnAttacks(int index, int color) => color == Piece.WHITE ? whitePawnAttacks[index] : blackPawnAttacks[index];
 
-    public static ulong[] knightMoves = new ulong[64];
+    public readonly static ulong[] knightMoves = new ulong[64];
 
-    public static ulong[] rookMasks = new ulong[64];
-    public static ulong[] bishopMasks = new ulong[64];
-    public static ulong[][] rookMoves = new ulong[64][];
-    public static ulong[][] bishopMoves = new ulong[64][];
+    static readonly ulong[] rookMasks = new ulong[64];
+    static readonly ulong[] bishopMasks = new ulong[64];
+    static readonly ulong[][] rookMoves = new ulong[64][];
+    static readonly ulong[][] bishopMoves = new ulong[64][];
 
-    public static ulong[] kingMoves = new ulong[64];
+    public static ulong RookMoves(int index, ulong blockedSquares) => rookMoves[index][(blockedSquares & rookMasks[index]) * MagicNumbers.rook[index] >> MagicNumbers.rookShift[index]];
+    public static ulong BishopMoves(int index, ulong blockedSquares) => bishopMoves[index][(blockedSquares & bishopMasks[index]) * MagicNumbers.bishop[index] >> MagicNumbers.bishopShift[index]];
+
+    public readonly static ulong[] kingMoves = new ulong[64];
 
     // N, E, S, W, NE, SE, SW, NE
-    public static int[,] movesToEdge = new int[64, 8];
+    public readonly static int[,] movesToEdge = new int[64, 8];
 
-    public static ulong[,] xrays = new ulong[64, 8];
+    public readonly static ulong[,] xrays = new ulong[64, 8];
 
-    public static ulong[,] alignMask = new ulong[64, 64];
+    public readonly static ulong[,] alignMask = new ulong[64, 64];
 
 
     static PrecomputedData()
@@ -55,6 +61,7 @@ public static class PrecomputedData
 
             // Precompute king moves
             kingMoves[index] = BitBoardHelper.KingMoves(index);
+
 
             int rank = BoardHelper.IndexToRank(index);
             int file = BoardHelper.IndexToFile(index);

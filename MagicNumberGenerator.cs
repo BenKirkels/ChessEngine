@@ -1,6 +1,8 @@
-namespace MagicGenerator;
 using Chess;
 using System.Numerics;
+using MoveGeneration;
+
+namespace MagicGenerator;
 
 public static class MagicNumberGenerator
 {
