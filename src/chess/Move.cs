@@ -61,8 +61,8 @@ public readonly struct Move
         int fromIndex = BoardHelper.UCIToIndex(from);
         int toIndex = BoardHelper.UCIToIndex(to);
 
-        int movedPiece = board.PieceAtSquare(fromIndex);
-        int capturedPiece = board.PieceAtSquare(toIndex);
+        int movedPiece = Piece.PieceType(board.PieceAtSquare(fromIndex));
+        int capturedPiece = Piece.PieceType(board.PieceAtSquare(toIndex));
 
         int flag = QUIET_MOVE;
 
@@ -150,4 +150,8 @@ public readonly struct Move
             };
         return moveString;
     }
+
+    public static bool operator ==(Move a, Move b) => a.moveData == b.moveData;
+    public static bool operator !=(Move a, Move b) => a.moveData != b.moveData;
+
 }

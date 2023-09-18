@@ -1,3 +1,4 @@
+using System.Numerics;
 using Helpers;
 using MoveGeneration;
 
@@ -16,7 +17,10 @@ public class Board
 {
     const int WHITE_INDEX = 0;
     const int BLACK_INDEX = 1;
+    const ulong WHITE_SQUARES = 0x55AA55AA55AA55AA;
+    const ulong BLACK_SQUARES = 0xAA55AA55AA55AA55;
     const string DEFAULT_STARTING_POSITION = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    public const int MAX_MOVES = 256;
     readonly MoveGen moveGenerator;
     bool hasInCheckValue;
     bool cashedInCheckValue;
@@ -47,7 +51,12 @@ public class Board
     public Stack<int> capturedPieces;
     public GameState gameState;
 
-    public void GetLegalMoves(ref Span<Move> moves, bool generateQuietMoves = true) => moveGenerator.GenerateMoves(ref moves, this, generateQuietMoves);
+    public Span<Move> GetLegalMoves(bool generateQuietMoves = true)
+    {
+        Span<Move> moves = new Move[MAX_MOVES];
+        moveGenerator.GenerateMoves(ref moves, this, generateQuietMoves);
+        return moves;
+    }
 
     public bool IsPieceAtSquare(int square, int piece) => BitBoardHelper.IsBitSet(pieceBitboards[piece], square);
     public bool IsPieceAtSquare(int square) => BitBoardHelper.IsBitSet(allPiecesBitboard, square);
@@ -64,6 +73,84 @@ public class Board
                 return piece;
         }
         return Piece.NONE;
+    }
+
+    public int MovePieceType(Move move) => Piece.PieceType(PieceAtSquare(move.from));
+    public int CapturePieceType(Move move) => Piece.PieceType(PieceAtSquare(move.to));
+    public bool FiftyMoveDraw()
+    {
+        return gameState.fiftyMoveCounter >= 100;
+    }
+    public bool IsRepetition()
+    {
+        foreach (GameState state in previousGameStates)
+        {
+            if (state.zobristKey == gameState.zobristKey && state.castlingRights == gameState.castlingRights && state.enPassantFile == gameState.enPassantFile)
+                return true;
+        }
+        return false;
+    }
+
+    public bool IsInsufficientMaterial()
+    {
+        // If there are any pawns, the position is not a draw
+        if (pieceBitboards[Piece.WHITE_PAWN] != 0) return false;
+        if (pieceBitboards[Piece.BLACK_PAWN] != 0) return false;
+
+        // If there are any queens or rooks, the position is not a draw
+        if (orthogonalSliders[WHITE_INDEX] != 0) return false;
+        if (orthogonalSliders[BLACK_INDEX] != 0) return false;
+
+        bool whiteSideDraw = false;
+        bool blackSideDraw = false;
+
+        ulong whiteKnights = pieceBitboards[Piece.WHITE_KNIGHT];
+        ulong whiteBishops = pieceBitboards[Piece.WHITE_BISHOP];
+
+        if (whiteKnights != 0)
+        {
+            // If there are multiple knights, the position is not a draw
+            if (BitOperations.PopCount(whiteKnights) > 1) return false;
+
+            // Knight and bishop is not a draw
+            if (whiteBishops != 0) return false;
+
+            // Lone knight is a draw
+            whiteSideDraw = true;
+        }
+
+        ulong blackKnights = pieceBitboards[Piece.BLACK_KNIGHT];
+        ulong blackBishops = pieceBitboards[Piece.BLACK_BISHOP];
+
+        if (blackKnights != 0)
+        {
+            // If there are multiple knights, the position is not a draw
+            if (BitOperations.PopCount(blackKnights) > 1) return false;
+
+            // Knight and bishop is not a draw
+            if (blackBishops != 0) return false;
+
+            // Lone knight is a draw
+            blackSideDraw = true;
+        }
+
+        // Only bishops left
+        if (whiteBishops != 0)
+        {
+            // Need both square colors to be able to mate
+            if ((whiteBishops & WHITE_SQUARES) == 0 || (whiteBishops & BLACK_SQUARES) == 0) whiteSideDraw = true;
+            else return false;
+        }
+
+        if (blackBishops != 0)
+        {
+            // Need both square colors to be able to mate
+            if ((blackBishops & WHITE_SQUARES) == 0 || (blackBishops & BLACK_SQUARES) == 0) blackSideDraw = true;
+            else return false;
+        }
+
+        if (whiteSideDraw && blackSideDraw) return true;
+        return false;
     }
 
     public bool InCheck()
@@ -377,6 +464,8 @@ public class Board
         whiteToMove = !whiteToMove;
         gameState = new GameState(castlingRights, enPassantFile, Zobrist.GenerateZobristKey(pieceBitboards, castlingRights, enPassantFile, whiteToMove), fiftyMoveCounter);
         plyCount++;
+
+        hasInCheckValue = false;
     }
 
     public void UndoMove(Move move)
@@ -572,24 +661,6 @@ public class Board
         hasInCheckValue = false;
     }
 
-    public void Reset()
-    {
-        previousGameStates.Clear();
-        capturedPieces.Clear();
-
-        pieceBitboards = new ulong[12];
-        colorBitboards = new ulong[2];
-        orthogonalSliders = new ulong[2];
-        diagonalSliders = new ulong[2];
-        allPiecesBitboard = 0;
-
-        whiteToMove = true;
-        gameState = new GameState();
-        plyCount = 0;
-
-        hasInCheckValue = false;
-    }
-
     public void SetPosition(string fen = DEFAULT_STARTING_POSITION)
     {
         string[] fenParts = fen.Split(' ');
@@ -633,6 +704,10 @@ public class Board
         // Ply count
         // The fen string contains the number of the full moves
         plyCount = 2 * (int.Parse(fenParts[5]) - 1) + (whiteToMove ? 0 : 1);
+
+        previousGameStates.Clear();
+        capturedPieces.Clear();
+        hasInCheckValue = false;
     }
 
     /// <summary>

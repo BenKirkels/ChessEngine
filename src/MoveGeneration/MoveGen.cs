@@ -15,8 +15,8 @@ public class MoveGen
     int opponentColorIndex;
     ulong myPiecesBitboard;
     ulong opponentPiecesBitboard;
-    ulong opponentDiagonalSlider;
-    ulong opponentOrthogonalSlider;
+    ulong opponentDiagonalSliders;
+    ulong opponentOrthogonalSliders;
     int myKingIndex;
     ulong allPiecesBitboard;
     int enPassantFile;
@@ -40,6 +40,9 @@ public class MoveGen
         this.generateQuietMoves = generateQuietMoves;
 
         Init();
+
+        CalculateAttackedSquares();
+        CalculatePinnedPieces();
 
         KingMoves(ref moves);
 
@@ -72,8 +75,8 @@ public class MoveGen
         myPiecesBitboard = board.colorBitboards[myColorIndex];
         opponentPiecesBitboard = board.colorBitboards[opponentColorIndex];
 
-        opponentDiagonalSlider = board.diagonalSliders[opponentColorIndex];
-        opponentOrthogonalSlider = board.orthogonalSliders[opponentColorIndex];
+        opponentDiagonalSliders = board.diagonalSliders[opponentColorIndex];
+        opponentOrthogonalSliders = board.orthogonalSliders[opponentColorIndex];
 
         ulong myKingBitboard = board.pieceBitboards[Piece.MakePiece(Piece.KING, myColor)];
         myKingIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref myKingBitboard);
@@ -84,14 +87,14 @@ public class MoveGen
 
         canCastleKingSide = board.CanCastleKingSide;
         canCastleQueenSide = board.CanCastleQueenSide;
-
-        AnalyseEnemyAttacks();
     }
 
-    void AnalyseEnemyAttacks()
-    {
-        bool hasQueen = false, hasRook = false, hasBishop = false;
 
+    // Calculate all squares attacked by opponent 
+    // and check if my king is checked by a pawn or knight
+    // Modify's: attackedSquares, inCheck, checkBlock 
+    void CalculateAttackedSquares()
+    {
         ulong pawnsBitboard = board.pieceBitboards[Piece.MakePiece(Piece.PAWN, opponentColor)];
         while (pawnsBitboard != 0)
         {
@@ -125,7 +128,6 @@ public class MoveGen
         ulong bishopsBitboard = board.pieceBitboards[Piece.MakePiece(Piece.BISHOP, opponentColor)];
         while (bishopsBitboard != 0)
         {
-            hasBishop = true;
             int bishopIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref bishopsBitboard);
             attackedSquares |= PrecomputedData.BishopMoves(bishopIndex, allPiecesBitboardWithoutMyKing);
         }
@@ -133,7 +135,6 @@ public class MoveGen
         ulong rooksBitboard = board.pieceBitboards[Piece.MakePiece(Piece.ROOK, opponentColor)];
         while (rooksBitboard != 0)
         {
-            hasRook = true;
             int rookIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref rooksBitboard);
             attackedSquares |= PrecomputedData.RookMoves(rookIndex, allPiecesBitboardWithoutMyKing);
         }
@@ -141,7 +142,6 @@ public class MoveGen
         ulong queensBitboard = board.pieceBitboards[Piece.MakePiece(Piece.QUEEN, opponentColor)];
         while (queensBitboard != 0)
         {
-            hasQueen = true;
             int queenIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref queensBitboard);
             attackedSquares |= PrecomputedData.RookMoves(queenIndex, allPiecesBitboardWithoutMyKing) | PrecomputedData.BishopMoves(queenIndex, allPiecesBitboardWithoutMyKing);
         }
@@ -149,15 +149,18 @@ public class MoveGen
         ulong opponentKingBitboard = board.pieceBitboards[Piece.MakePiece(Piece.KING, opponentColor)];
         int opponentKingIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref opponentKingBitboard);
         attackedSquares |= PrecomputedData.kingMoves[opponentKingIndex];
+    }
 
-        // Pinned pieces
+    // Calculate all pinned pieces 
+    // and check if my king is checked by a slider
+    // Modify's: pinnedPieces, inCheck, doubleCheck, checkBlock
+    public void CalculatePinnedPieces()
+    {
         int startdir = 0;
         int enddir = 7;
-        if (!hasQueen)
-        {
-            if (!hasRook) startdir = 4;
-            if (!hasBishop) enddir = 3;
-        }
+
+        if (opponentOrthogonalSliders == 0) startdir = 4;
+        if (opponentDiagonalSliders == 0) enddir = 3;
 
         // Perform xray in all directions from the king
         for (int dir = startdir; dir <= enddir; dir++)
@@ -165,7 +168,7 @@ public class MoveGen
             ulong xray = PrecomputedData.xrays[myKingIndex, dir];
             bool diagonal = dir > 3 ? true : false;
 
-            ulong sliderPieces = diagonal ? opponentDiagonalSlider : opponentOrthogonalSlider;
+            ulong sliderPieces = diagonal ? opponentDiagonalSliders : opponentOrthogonalSliders;
             ulong pinnedMask = 0;
 
             if ((xray & sliderPieces) == 0) continue; // No slider in this direction
@@ -336,11 +339,11 @@ public class MoveGen
     }
     bool InCheckAfterEnPassent(int startIndex, int targetIndex, int enPassantIndex)
     {
-        if (opponentOrthogonalSlider != 0)
+        if (opponentOrthogonalSliders != 0)
         {
             ulong maskerBlockers = allPiecesBitboard ^ (BitBoardHelper.Index(startIndex) | BitBoardHelper.Index(targetIndex) | BitBoardHelper.Index(enPassantIndex));
             ulong rookAttacks = PrecomputedData.RookMoves(myKingIndex, maskerBlockers);
-            return (rookAttacks & opponentOrthogonalSlider) != 0;
+            return (rookAttacks & opponentOrthogonalSliders) != 0;
         }
         return false;
     }

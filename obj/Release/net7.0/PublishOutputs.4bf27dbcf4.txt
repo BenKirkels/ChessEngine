@@ -1,0 +1,5 @@
+C:\Users\benki\ChessEngine\bin\Release\net7.0\publish\ChessEngine.exe
+C:\Users\benki\ChessEngine\bin\Release\net7.0\publish\ChessEngine.dll
+C:\Users\benki\ChessEngine\bin\Release\net7.0\publish\ChessEngine.deps.json
+C:\Users\benki\ChessEngine\bin\Release\net7.0\publish\ChessEngine.runtimeconfig.json
+C:\Users\benki\ChessEngine\bin\Release\net7.0\publish\ChessEngine.pdb
