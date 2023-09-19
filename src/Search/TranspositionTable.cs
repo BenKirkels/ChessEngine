@@ -47,13 +47,13 @@ public class TranspositionTable
                 return true;
             }
 
-            if (entry.flag == TranspostionEntry.LOWERBOUND && entry.score >= beta) // && !pvNode
+            if (entry.flag == TranspostionEntry.LOWERBOUND && entry.score >= beta && !pvNode)
             {
                 eval = entry.score;
                 return true;
             }
 
-            if (entry.flag == TranspostionEntry.UPPERBOUND && entry.score <= alpha) // && !pvNode
+            if (entry.flag == TranspostionEntry.UPPERBOUND && entry.score <= alpha && !pvNode)
             {
                 eval = entry.score;
                 return true;
