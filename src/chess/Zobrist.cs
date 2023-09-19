@@ -14,7 +14,7 @@ public static class Zobrist
     /// <summary>
     /// One number for each piece type and color at each square.
     /// </summary>
-    private readonly static ulong[,] piecesNumbers = new ulong[12, 64];
+    private readonly static ulong[,] piecesNumbers = new ulong[Piece.MAX_PIECE_NUMBER + 1, 64];
 
     /// <summary>
     /// One number for every combination of castling rights.
@@ -29,7 +29,7 @@ public static class Zobrist
     /// <summary>
     /// One number for side to move.
     /// </summary>
-    private readonly static ulong whiteToMoveNumber = 0;
+    private readonly static ulong whiteToMoveNumber;
 
     /// <summary>
     /// Generates the random numbers used to generate the zobrist key.
@@ -39,7 +39,7 @@ public static class Zobrist
         Random random = new Random(29426028);
 
         // Pieces
-        for (int i = 0; i < 12; i++)
+        foreach (int i in Piece.PieceNumbers)
             for (int j = 0; j < 64; j++)
                 piecesNumbers[i, j] = Random64bitNumber(random);
 
@@ -68,7 +68,7 @@ public static class Zobrist
         ulong zobristKey = 0;
 
         // Pieces
-        for (int i = 0; i < 12; i++)
+        foreach (int i in Piece.PieceNumbers)
         {
             ulong pieceBitBoard = pieceBitBoards[i];
             while (pieceBitBoard != 0)

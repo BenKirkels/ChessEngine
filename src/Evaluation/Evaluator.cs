@@ -21,12 +21,14 @@ public class Evaluator
         ulong whiteBishops = board.pieceBitboards[Piece.WHITE_BISHOP];
         ulong whiteRooks = board.pieceBitboards[Piece.WHITE_ROOK];
         ulong whiteQueens = board.pieceBitboards[Piece.WHITE_QUEEN];
+        //ulong whiteKing = board.pieceBitboards[Piece.WHITE_KING];
 
         ulong blackPawns = board.pieceBitboards[Piece.BLACK_PAWN];
         ulong blackKnights = board.pieceBitboards[Piece.BLACK_KNIGHT];
         ulong blackBishops = board.pieceBitboards[Piece.BLACK_BISHOP];
         ulong blackRooks = board.pieceBitboards[Piece.BLACK_ROOK];
         ulong blackQueens = board.pieceBitboards[Piece.BLACK_QUEEN];
+        //ulong blackKing = board.pieceBitboards[Piece.BLACK_KING];
 
         while (whitePawns != 0)
         {
@@ -64,6 +66,9 @@ public class Evaluator
             eval += PieceValues[Piece.QUEEN];
             eval += PieceSquareTables.Read(PieceSquareTables.Queens, index, true);
         }
+        //int whiteKingIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref whiteKing);
+        //earlyGameEval += PieceSquareTables.Read(PieceSquareTables.King, whiteKingIndex, true);
+        //lateGameEval += PieceSquareTables.Read(PieceSquareTables.KingEnd, whiteKingIndex, true);
 
 
         while (blackPawns != 0)
@@ -102,9 +107,13 @@ public class Evaluator
             eval -= PieceValues[Piece.QUEEN];
             eval -= PieceSquareTables.Read(PieceSquareTables.Queens, index, false);
         }
+        //int blackKingIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref blackKing);
+        //earlyGameEval -= PieceSquareTables.Read(PieceSquareTables.King, blackKingIndex, false);
+        //lateGameEval -= PieceSquareTables.Read(PieceSquareTables.KingEnd, blackKingIndex, false);
 
         phase = Math.Min(phase, 24);
         eval += (earlyGameEval * (24 - phase) + lateGameEval * phase) / 24;
+        //eval += (earlyGameEval * phase + lateGameEval * (24 - phase)) / 24;
 
         return board.whiteToMove ? eval : -eval;
     }

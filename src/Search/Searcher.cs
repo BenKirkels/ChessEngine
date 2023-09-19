@@ -118,7 +118,7 @@ public class Searcher
             }
 
             // Transposition table
-            if (transpositionTable.TryGetEvaluation(alpha, beta, depth, out eval))
+            if (transpositionTable.TryGetEvaluation(alpha, beta, depth, pvNode, out eval))
             {
                 searchInfo.tbhits++;
                 return eval;
@@ -251,7 +251,7 @@ public class Searcher
 
     void PrintSearchInfo()
     {
-        Console.WriteLine($"info depth {searchInfo.depth} time {stopwatch.ElapsedMilliseconds} nodes {searchInfo.nodes} score cp {searchInfo.score} nps {searchInfo.nodes / (stopwatch.ElapsedMilliseconds * 1000 + 1)} tbhits {searchInfo.tbhits} pv {BestMoveRoot}");
+        Console.WriteLine($"info depth {searchInfo.depth} time {stopwatch.ElapsedMilliseconds} nodes {searchInfo.nodes} score cp {searchInfo.score} nps {1000 * searchInfo.nodes / (stopwatch.ElapsedMilliseconds + 1)} tbhits {searchInfo.tbhits} pv {BestMoveRoot}");
     }
     public struct SearchInfo
     {

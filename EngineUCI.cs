@@ -51,7 +51,7 @@ public class EngineUCI
     {
         // Call static classes to calculate precomputed data
         PrecomputedData.RookMoves(0, 0);
-        Zobrist.GenerateZobristKey(new ulong[Piece.MAX_PIECE_NUMBER], 0, 0, true);
+        Zobrist.GenerateZobristKey(new ulong[Piece.MAX_PIECE_NUMBER + 1], 0, 0, true);
     }
 
     // Format: 'position startpos moves e2e4 e7e5'

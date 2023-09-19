@@ -35,34 +35,32 @@ public class TranspositionTable
 
     ulong index => board.gameState.zobristKey % (ulong)numberOfEntriesPerTable;
 
-    public bool TryGetEvaluation(int alpha, int beta, int depth, out int eval)
+    public bool TryGetEvaluation(int alpha, int beta, int depth, bool pvNode, out int eval)
     {
+        TranspostionEntry entry = table[index];
+
+        if (entry.zobristKey == board.gameState.zobristKey && entry.depth >= depth && Math.Abs(entry.score) < (Searcher.MATE_SCORE - 100))
+        {
+            if (entry.flag == TranspostionEntry.EXACT)
+            {
+                eval = entry.score;
+                return true;
+            }
+
+            if (entry.flag == TranspostionEntry.LOWERBOUND && entry.score >= beta) // && !pvNode
+            {
+                eval = entry.score;
+                return true;
+            }
+
+            if (entry.flag == TranspostionEntry.UPPERBOUND && entry.score <= alpha) // && !pvNode
+            {
+                eval = entry.score;
+                return true;
+            }
+        }
         eval = 0;
         return false;
-        /*  TranspostionEntry entry = table[index];
-
-         if (entry.zobristKey == board.gameState.zobristKey && entry.depth >= depth && Math.Abs(entry.score) < Searcher.MATE_SCORE - 100)
-         {
-             if (entry.flag == TranspostionEntry.EXACT)
-             {
-                 eval = entry.score;
-                 return true;
-             }
-
-             if (entry.flag == TranspostionEntry.LOWERBOUND && entry.score >= beta)
-             {
-                 eval = entry.score;
-                 return true;
-             }
-
-             if (entry.flag == TranspostionEntry.UPPERBOUND && entry.score <= alpha)
-             {
-                 eval = entry.score;
-                 return true;
-             }
-         }
-         eval = 0;
-         return false; */
     }
 
     public Move GetBestMove()

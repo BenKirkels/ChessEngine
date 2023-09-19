@@ -30,6 +30,12 @@ public static class Piece
 
     public const int MAX_PIECE_NUMBER = BLACK_KING;
 
+    public static readonly int[] PieceNumbers = {
+        WHITE_PAWN, WHITE_KNIGHT, WHITE_BISHOP, WHITE_ROOK, WHITE_QUEEN, WHITE_KING,
+        BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING
+    };
+
+
     public const int PIECE_TYPE_MASK = 0b111;
     public const int COLOR_MASK = 0b1000;
 
