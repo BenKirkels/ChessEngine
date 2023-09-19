@@ -5,62 +5,75 @@ namespace Search;
 
 public class TranspositionTable
 {
-    private int sizeInMb = 64;
-    private int sizeInBytes => sizeInMb * 1024 * 1024;
-    private int sizeOfEntry = TranspostionEntry.SIZE_OF_ENTRY;
-    private int numberOfEntries => sizeInBytes / sizeOfEntry;
-    private int numberOfEntriesPerTable => numberOfEntries / 2;
+    int sizeInMb = 64;
 
-    private TranspostionEntry[] tableDepthPrefered;
-    private TranspostionEntry[] tableAlwaysReplace;
+    int numberOfEntriesPerTable;
+    TranspostionEntry[] table;
 
-    public TranspositionTable()
+
+    Board board;
+
+    public TranspositionTable(Board board)
     {
-        tableDepthPrefered = new TranspostionEntry[numberOfEntriesPerTable];
-        tableAlwaysReplace = new TranspostionEntry[numberOfEntriesPerTable];
+        int sizeInBytes = sizeInMb * 1024 * 1024;
+        int sizeOfEntry = TranspostionEntry.GetSize();
+        int numberOfEntries = sizeInBytes / sizeOfEntry;
+        numberOfEntriesPerTable = numberOfEntries / 1;
+
+        this.board = board;
+        table = new TranspostionEntry[numberOfEntriesPerTable];
     }
 
-    public TranspostionEntry Get(Board board)
-    {
-        ulong zobrist = board.gameState.zobristKey;
-        int index = (int)(zobrist % (ulong)numberOfEntriesPerTable);
-
-        TranspostionEntry entry = tableDepthPrefered[index];
-
-        if (entry.zobristKey == zobrist)
-        {
-
-            return entry;
-        }
-
-        entry = tableAlwaysReplace[index];
-
-        if (entry.zobristKey == zobrist)
-        {
-            return entry;
-        }
-
-        return TranspostionEntry.INVALID_ENTRY;
-    }
-
-    public void Store(TranspostionEntry entry)
-    {
-        int index = (int)(entry.zobristKey % (ulong)numberOfEntriesPerTable);
-
-        if (entry.depth > tableDepthPrefered[index].depth)
-        {
-            tableDepthPrefered[index] = entry;
-        }
-        else if (entry.zobristKey != tableDepthPrefered[index].zobristKey) // If the position is already in the depth prefered table, we don't want to replace it in the always replace table
-        {
-            tableAlwaysReplace[index] = entry;
-        }
-    }
 
     public void Clear()
     {
-        tableDepthPrefered = new TranspostionEntry[numberOfEntriesPerTable];
-        tableAlwaysReplace = new TranspostionEntry[numberOfEntriesPerTable];
+        for (int i = 0; i < numberOfEntriesPerTable; i++)
+        {
+            table[i] = new();
+        }
+    }
+
+    ulong index => board.gameState.zobristKey % (ulong)numberOfEntriesPerTable;
+
+    public bool TryGetEvaluation(int alpha, int beta, int depth, out int eval)
+    {
+        eval = 0;
+        return false;
+        /*  TranspostionEntry entry = table[index];
+
+         if (entry.zobristKey == board.gameState.zobristKey && entry.depth >= depth && Math.Abs(entry.score) < Searcher.MATE_SCORE - 100)
+         {
+             if (entry.flag == TranspostionEntry.EXACT)
+             {
+                 eval = entry.score;
+                 return true;
+             }
+
+             if (entry.flag == TranspostionEntry.LOWERBOUND && entry.score >= beta)
+             {
+                 eval = entry.score;
+                 return true;
+             }
+
+             if (entry.flag == TranspostionEntry.UPPERBOUND && entry.score <= alpha)
+             {
+                 eval = entry.score;
+                 return true;
+             }
+         }
+         eval = 0;
+         return false; */
+    }
+
+    public Move GetBestMove()
+    {
+        return table[index].bestMove;
+    }
+
+    public void Store(int depth, int eval, int flag, Move bestMove)
+    {
+        TranspostionEntry newEntry = new(board.gameState.zobristKey, (byte)depth, eval, bestMove, (byte)flag);
+        table[index] = newEntry;
     }
 }
 

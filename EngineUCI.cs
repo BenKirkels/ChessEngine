@@ -103,7 +103,7 @@ public class EngineUCI
 
             searchTime = TimeCalculation(wtime, btime, winc, binc);
         }
-        searcher.StartSearch(board, searchTime);
+        searcher.StartSearch(searchTime);
         string bestMove = searcher.GetBestMove().ToString();
         Respond($"bestmove {bestMove}");
     }
