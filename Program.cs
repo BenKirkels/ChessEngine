@@ -11,25 +11,25 @@ public static class Program
 #if DEBUG
         Stopwatch stopwatch = new();
         Stopwatch stopwatchTotal = new();
-        Console.WriteLine("start tests");  // Nothing | Zobrist
+        Console.WriteLine("start tests");  // Nothing | Zobrist | squares
 
         string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         Board board = Board.CreateBoardFromFen(fen);
         stopwatchTotal.Start();
 
         stopwatch.Start();
-        //_ = CountMoves(board, 7);
+        _ = CountMoves(board, 7);
         stopwatch.Stop();
-        Console.WriteLine($"Test1: {stopwatch.ElapsedMilliseconds}ms"); // 583_072ms | 286_488ms
+        Console.WriteLine($"Test1: {stopwatch.ElapsedMilliseconds}ms"); // 583_072ms | 286_488ms | 251_270ms
 
         fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
         board = Board.CreateBoardFromFen(fen);
 
         stopwatch.Restart();
-        //_ = CountMoves(board, 5);
+        _ = CountMoves(board, 5);
         stopwatch.Stop();
 
-        Console.WriteLine($"Test2: {stopwatch.ElapsedMilliseconds}ms"); // (35_411ms)(-1) | (18222ms) |
+        Console.WriteLine($"Test2: {stopwatch.ElapsedMilliseconds}ms"); // (35_411ms)(-1) | (18_222ms) | 15_926ms
 
         fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1";
         board = Board.CreateBoardFromFen(fen);
@@ -38,7 +38,7 @@ public static class Program
         _ = CountMoves(board, 8);
         stopwatch.Stop();
 
-        Console.WriteLine($"Test3: {stopwatch.ElapsedMilliseconds}ms"); // 481_443ms | 343_202ms
+        Console.WriteLine($"Test3: {stopwatch.ElapsedMilliseconds}ms"); // 481_443ms | 343_202ms | 272_494ms
 
         stopwatchTotal.Stop();
 

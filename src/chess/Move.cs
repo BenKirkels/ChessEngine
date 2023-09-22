@@ -61,8 +61,8 @@ public readonly struct Move
         int fromIndex = BoardHelper.UCIToIndex(from);
         int toIndex = BoardHelper.UCIToIndex(to);
 
-        int movedPiece = Piece.PieceType(board.PieceAtSquare(fromIndex));
-        int capturedPiece = Piece.PieceType(board.PieceAtSquare(toIndex));
+        int movedPiece = Piece.PieceType(board.PieceAtIndex(fromIndex));
+        int capturedPiece = Piece.PieceType(board.PieceAtIndex(toIndex));
 
         int flag = QUIET_MOVE;
 
