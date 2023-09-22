@@ -1,5 +1,7 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Helpers;
+using Microsoft.VisualBasic;
 using MoveGeneration;
 
 namespace Chess;
@@ -47,9 +49,10 @@ public class Board
     /// <summary>
     /// Store the data that is not easily reversible.
     /// </summary>
-    private Stack<GameState> previousGameStates;
-    public Stack<int> capturedPieces;
+    Stack<GameState> previousGameStates;
+    Stack<int> capturedPieces;
     public GameState gameState;
+    ulong piecesZobristKey;
 
     public Span<Move> GetLegalMoves(bool generateQuietMoves = true)
     {
@@ -201,12 +204,11 @@ public class Board
         int castlingRights = gameState.castlingRights;
         int fiftyMoveCounter = gameState.fiftyMoveCounter + 1;
 
-        int movedPiece, capturedPiece;
+        int movedPiece = PieceAtSquare(move.from);
 
         switch (move.flag)
         {
             case Move.QUIET_MOVE:
-                movedPiece = PieceAtSquare(move.from);
                 switch (Piece.PieceType(movedPiece))
                 {
                     case Piece.PAWN:
@@ -243,26 +245,32 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
+
                 break;
             case Move.DOUBLE_PAWN_PUSH:
                 fiftyMoveCounter = 0; // Reset after pawn move
 
                 enPassantFile = BoardHelper.IndexToFile(move.to);
 
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, MyColor)], move.to);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
 
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
+
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
 
                 break;
             case Move.KING_CASTLE:
                 // King movement
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.KING, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.KING, MyColor)], move.to);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
@@ -270,9 +278,13 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
+
                 // Rook movement
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.ROOK, MyColor)], move.to + 1);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.ROOK, MyColor)], move.to - 1);
+                int myRook = Piece.MakePiece(Piece.ROOK, MyColor);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[myRook], move.to + 1);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[myRook], move.to - 1);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to + 1);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to - 1);
@@ -280,12 +292,15 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to + 1);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to - 1);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, myRook, move.to + 1);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, myRook, move.to - 1);
+
                 castlingRights &= whiteToMove ? 0b0011 : 0b1100; // Remove castling rights for the side that castled
                 break;
             case Move.QUEEN_CASTLE:
                 // King movement
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.KING, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.KING, MyColor)], move.to);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
@@ -293,9 +308,13 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
+
                 // Rook movement
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.ROOK, MyColor)], move.to + 1);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.ROOK, MyColor)], move.to - 2);
+                myRook = Piece.MakePiece(Piece.ROOK, MyColor);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[myRook], move.to + 1);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[myRook], move.to - 2);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to + 1);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to - 2);
@@ -303,13 +322,15 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to + 1);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to - 2);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, myRook, move.to + 1);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, myRook, move.to - 2);
+
                 castlingRights &= whiteToMove ? 0b0011 : 0b1100; // Remove castling rights for the side that castled
                 break;
             case Move.CAPTURE:
                 fiftyMoveCounter = 0; // Reset after capture
 
-                movedPiece = PieceAtSquare(move.from);
-                capturedPiece = PieceAtSquare(move.to);
+                int capturedPiece = PieceAtSquare(move.to);
 
                 // Moved piece
                 BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
@@ -320,10 +341,15 @@ public class Board
 
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
+
                 // Captured piece
                 BitBoardHelper.ToggleIndex(ref pieceBitboards[capturedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[OpponentColorIndex], move.to);
+
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, capturedPiece, move.to);
 
                 // If the captured piece is a rook, remove castling rights for the side that lost the rook
                 if (Piece.PieceType(capturedPiece) == Piece.ROOK)
@@ -375,8 +401,8 @@ public class Board
                 fiftyMoveCounter = 0; // Reset after capture/pawn move
 
                 // Moved piece
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, MyColor)], move.to);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
@@ -384,13 +410,19 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
+
                 // Captured piece
                 int capturedPawnIndex = move.to + (whiteToMove ? -8 : 8);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, OpponentColor)], capturedPawnIndex);
+                int opponentPawn = Piece.MakePiece(Piece.PAWN, OpponentColor);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[opponentPawn], capturedPawnIndex);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[OpponentColorIndex], capturedPawnIndex);
 
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, capturedPawnIndex);
+
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, opponentPawn, capturedPawnIndex);
 
                 break;
             case Move.QUEEN_PROMOTION:
@@ -399,14 +431,19 @@ public class Board
             case Move.ROOK_PROMOTION:
                 fiftyMoveCounter = 0; // Reset after pawn move
 
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(move.promotionPieceType, MyColor)], move.to);
+                int promotionPiece = Piece.MakePiece(move.promotionPieceType, MyColor);
+
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[promotionPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
 
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
+
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, promotionPiece, move.to);
 
                 break;
             case Move.QUEEN_PROMOTION_CAPTURE:
@@ -416,20 +453,27 @@ public class Board
                 fiftyMoveCounter = 0; // Reset after capture/pawn move
 
                 capturedPiece = PieceAtSquare(move.to);
+                promotionPiece = Piece.MakePiece(move.promotionPieceType, MyColor);
 
                 // Moved piece
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(move.promotionPieceType, MyColor)], move.to);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[promotionPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
 
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, promotionPiece, move.to);
+
                 // Captured piece
                 BitBoardHelper.ToggleIndex(ref pieceBitboards[capturedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[OpponentColorIndex], move.to);
+
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, capturedPiece, move.to);
+
 
                 // If the captured piece is a rook, remove castling rights for the side that lost the rook
                 if (Piece.PieceType(capturedPiece) == Piece.ROOK)
@@ -462,7 +506,10 @@ public class Board
 
 
         whiteToMove = !whiteToMove;
-        gameState = new GameState(castlingRights, enPassantFile, Zobrist.GenerateZobristKey(pieceBitboards, castlingRights, enPassantFile, whiteToMove), fiftyMoveCounter);
+        Zobrist.SwitchColor(ref piecesZobristKey);
+
+        ulong zobristKey = piecesZobristKey ^ Zobrist.GenerateGameStateZobristKey(castlingRights, enPassantFile);
+        gameState = new GameState(castlingRights, enPassantFile, zobristKey, fiftyMoveCounter);
         plyCount++;
 
         hasInCheckValue = false;
@@ -472,15 +519,15 @@ public class Board
     {
         gameState = previousGameStates.Pop();
         whiteToMove = !whiteToMove;
+        Zobrist.SwitchColor(ref piecesZobristKey);
         plyCount--;
 
-        int movedPiece, capturedPiece;
+        int movedPiece = PieceAtSquare(move.to);
 
         switch (move.flag)
         {
             case Move.QUIET_MOVE:
             case Move.DOUBLE_PAWN_PUSH:
-                movedPiece = PieceAtSquare(move.to);
 
                 BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
                 BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.to);
@@ -491,11 +538,14 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
+
                 break;
             case Move.KING_CASTLE:
                 // King movement
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.KING, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.KING, MyColor)], move.to);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
@@ -503,9 +553,13 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
+
                 // Rook movement
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.ROOK, MyColor)], move.to + 1);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.ROOK, MyColor)], move.to - 1);
+                int myRook = Piece.MakePiece(Piece.ROOK, MyColor);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[myRook], move.to + 1);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[myRook], move.to - 1);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to + 1);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to - 1);
@@ -513,11 +567,14 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to + 1);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to - 1);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, myRook, move.to + 1);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, myRook, move.to - 1);
+
                 break;
             case Move.QUEEN_CASTLE:
                 // King movement
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.KING, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.KING, MyColor)], move.to);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
@@ -525,9 +582,13 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
+
                 // Rook movement
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.ROOK, MyColor)], move.to + 1);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.ROOK, MyColor)], move.to - 2);
+                myRook = Piece.MakePiece(Piece.ROOK, MyColor);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[myRook], move.to + 1);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[myRook], move.to - 2);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to + 1);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to - 2);
@@ -535,10 +596,12 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to + 1);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to - 2);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, myRook, move.to + 1);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, myRook, move.to - 2);
+
                 break;
             case Move.CAPTURE:
-                movedPiece = PieceAtSquare(move.to);
-                capturedPiece = capturedPieces.Pop();
+                int capturedPiece = capturedPieces.Pop();
 
                 // Moved piece
                 BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
@@ -549,16 +612,21 @@ public class Board
 
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
+
                 // Captured piece
                 BitBoardHelper.ToggleIndex(ref pieceBitboards[capturedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[OpponentColorIndex], move.to);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, capturedPiece, move.to);
+
                 break;
             case Move.EN_PASSANT:
                 // Moved piece
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, MyColor)], move.to);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
@@ -566,27 +634,38 @@ public class Board
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.to);
+
                 // Captured piece
                 int capturedPawnIndex = move.to + (whiteToMove ? -8 : 8);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, OpponentColor)], capturedPawnIndex);
+                int opponentPawn = Piece.MakePiece(Piece.PAWN, OpponentColor);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[opponentPawn], capturedPawnIndex);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[OpponentColorIndex], capturedPawnIndex);
 
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, capturedPawnIndex);
+
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, opponentPawn, capturedPawnIndex);
 
                 break;
             case Move.QUEEN_PROMOTION:
             case Move.KNIGHT_PROMOTION:
             case Move.BISHOP_PROMOTION:
             case Move.ROOK_PROMOTION:
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(move.promotionPieceType, MyColor)], move.to);
+                int promotionPiece = movedPiece;
+                movedPiece = Piece.MakePiece(Piece.PAWN, MyColor);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[promotionPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
 
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.to);
+
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, promotionPiece, move.to);
 
                 break;
             case Move.QUEEN_PROMOTION_CAPTURE:
@@ -594,20 +673,27 @@ public class Board
             case Move.BISHOP_PROMOTION_CAPTURE:
             case Move.ROOK_PROMOTION_CAPTURE:
                 capturedPiece = capturedPieces.Pop();
+                promotionPiece = movedPiece;
+                movedPiece = Piece.MakePiece(Piece.PAWN, MyColor);
 
                 // Moved piece
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(Piece.PAWN, MyColor)], move.from);
-                BitBoardHelper.ToggleIndex(ref pieceBitboards[Piece.MakePiece(move.promotionPieceType, MyColor)], move.to);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[movedPiece], move.from);
+                BitBoardHelper.ToggleIndex(ref pieceBitboards[promotionPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.from);
                 BitBoardHelper.ToggleIndex(ref colorBitboards[MyColorIndex], move.to);
 
                 BitBoardHelper.ToggleIndex(ref allPiecesBitboard, move.from);
 
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, movedPiece, move.from);
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, promotionPiece, move.to);
+
                 // Captured piece
                 BitBoardHelper.ToggleIndex(ref pieceBitboards[capturedPiece], move.to);
 
                 BitBoardHelper.ToggleIndex(ref colorBitboards[OpponentColorIndex], move.to);
+
+                Zobrist.UpdatePiecesZobristKey(ref piecesZobristKey, capturedPiece, move.to);
 
                 break;
         }
@@ -618,30 +704,6 @@ public class Board
         diagonalSliders[OpponentColorIndex] = pieceBitboards[Piece.MakePiece(Piece.BISHOP, OpponentColor)] | pieceBitboards[Piece.MakePiece(Piece.QUEEN, OpponentColor)];
     }
 
-
-    /* public Board(ulong[] BitBoards, bool whiteToMove, GameState gameState, int plyCount)
-    {
-        moveGenerator = new MoveGen();
-        previousGameStates = new Stack<GameState>();
-        capturedPieces = new Stack<int>();
-
-        pieceBitboards = BitBoards;
-
-        colorBitboards[WHITE_INDEX] = BitBoards[Piece.WHITE_PAWN] | BitBoards[Piece.WHITE_KNIGHT] | BitBoards[Piece.WHITE_BISHOP] | BitBoards[Piece.WHITE_ROOK] | BitBoards[Piece.WHITE_QUEEN] | BitBoards[Piece.WHITE_KING];
-        colorBitboards[BLACK_INDEX] = BitBoards[Piece.BLACK_PAWN] | BitBoards[Piece.BLACK_KNIGHT] | BitBoards[Piece.BLACK_BISHOP] | BitBoards[Piece.BLACK_ROOK] | BitBoards[Piece.BLACK_QUEEN] | BitBoards[Piece.BLACK_KING];
-
-        orthogonalSliders[WHITE_INDEX] = BitBoards[Piece.WHITE_ROOK] | BitBoards[Piece.WHITE_QUEEN];
-        orthogonalSliders[BLACK_INDEX] = BitBoards[Piece.BLACK_ROOK] | BitBoards[Piece.BLACK_QUEEN];
-
-        diagonalSliders[WHITE_INDEX] = BitBoards[Piece.WHITE_BISHOP] | BitBoards[Piece.WHITE_QUEEN];
-        diagonalSliders[BLACK_INDEX] = BitBoards[Piece.BLACK_BISHOP] | BitBoards[Piece.BLACK_QUEEN];
-
-        allPiecesBitboard = colorBitboards[WHITE_INDEX] | colorBitboards[BLACK_INDEX];
-
-        this.whiteToMove = whiteToMove;
-        this.gameState = gameState;
-        this.plyCount = plyCount;
-    } */
     public Board()
     {
         moveGenerator = new MoveGen();
@@ -657,6 +719,7 @@ public class Board
         whiteToMove = true;
         gameState = new GameState();
         plyCount = 0;
+        piecesZobristKey = 0;
 
         hasInCheckValue = false;
     }
@@ -691,7 +754,8 @@ public class Board
         int enPassantFile = FenHelper.EnPassantFile(fenParts[3]);
 
         // Zobrist key
-        ulong zobristKey = Zobrist.GenerateZobristKey(pieceBitboards, castlingRights, enPassantFile, whiteToMove);
+        piecesZobristKey = Zobrist.GeneratePiecesZobristKey(pieceBitboards, whiteToMove);
+        ulong zobristKey = piecesZobristKey ^ Zobrist.GenerateGameStateZobristKey(castlingRights, enPassantFile);
 
         gameState = new GameState(
             castlingRights,

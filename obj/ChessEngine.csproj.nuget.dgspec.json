@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\benki\\ChessEngine\\ChessEngine.csproj": {}
+    "c:\\Users\\benki\\ChessEngine\\ChessEngine.csproj": {}
   },
   "projects": {
-    "C:\\Users\\benki\\ChessEngine\\ChessEngine.csproj": {
+    "c:\\Users\\benki\\ChessEngine\\ChessEngine.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\benki\\ChessEngine\\ChessEngine.csproj",
+        "projectUniqueName": "c:\\Users\\benki\\ChessEngine\\ChessEngine.csproj",
         "projectName": "ChessEngine",
-        "projectPath": "C:\\Users\\benki\\ChessEngine\\ChessEngine.csproj",
+        "projectPath": "c:\\Users\\benki\\ChessEngine\\ChessEngine.csproj",
         "packagesPath": "C:\\Users\\benki\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\benki\\ChessEngine\\obj\\",
+        "outputPath": "c:\\Users\\benki\\ChessEngine\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\benki\\AppData\\Roaming\\NuGet\\NuGet.Config",
