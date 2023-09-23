@@ -21,6 +21,8 @@ public static class BitBoardHelper
     public const ulong fileF = 0x2020202020202020;
     public const ulong fileG = 0x4040404040404040;
     public const ulong fileH = 0x8080808080808080;
+    public const ulong PROMOTION_RANKS = rank1 | rank8;
+    public const ulong NOT_PROMOTION_RANKS = ~PROMOTION_RANKS;
     public static ulong Rank(int rank) => rank1 << (rank * 8);
     public static ulong File(int file) => fileA << file;
     public static ulong Diagonal(Square troughSquare, bool AntiDiagonal = false)
@@ -46,6 +48,11 @@ public static class BitBoardHelper
         int index = BitOperations.TrailingZeroCount(bitboard);
         ToggleIndex(ref bitboard, index);
         return index;
+    }
+
+    public static int GetIndexOfLSB(ulong bitboard)
+    {
+        return BitOperations.TrailingZeroCount(bitboard);
     }
 
     /// <summary>

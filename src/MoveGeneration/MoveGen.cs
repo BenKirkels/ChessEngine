@@ -1,3 +1,4 @@
+using System.Collections;
 using Chess;
 using Helpers;
 
@@ -9,6 +10,7 @@ public class MoveGen
     Board board;
     bool generateQuietMoves;
     bool whiteToMove;
+    int pushOffset;
     int myColor;
     int myColorIndex;
     int opponentColor;
@@ -17,14 +19,17 @@ public class MoveGen
     ulong opponentPiecesBitboard;
     ulong opponentDiagonalSliders;
     ulong opponentOrthogonalSliders;
+    ulong myKingBitboard;
     int myKingIndex;
     ulong allPiecesBitboard;
+    ulong emptySquaresBitboard;
     int enPassantFile;
     bool canCastleKingSide;
     bool canCastleQueenSide;
 
     public ulong attackedSquares;
     ulong pinnedPieces;
+    ulong notPinnedPieces;
 
     //Contains all target squares that can stop the check. 
     //If not in check, all bits set to 1 
@@ -43,6 +48,7 @@ public class MoveGen
 
         CalculateAttackedSquares();
         CalculatePinnedPieces();
+        notPinnedPieces = ~pinnedPieces;
 
         KingMoves(ref moves);
 
@@ -71,6 +77,7 @@ public class MoveGen
         myColorIndex = board.MyColorIndex;
         opponentColor = board.OpponentColor;
         opponentColorIndex = board.OpponentColorIndex;
+        pushOffset = whiteToMove ? 8 : -8;
 
         myPiecesBitboard = board.colorBitboards[myColorIndex];
         opponentPiecesBitboard = board.colorBitboards[opponentColorIndex];
@@ -78,10 +85,11 @@ public class MoveGen
         opponentDiagonalSliders = board.diagonalSliders[opponentColorIndex];
         opponentOrthogonalSliders = board.orthogonalSliders[opponentColorIndex];
 
-        ulong myKingBitboard = board.pieceBitboards[Piece.MakePiece(Piece.KING, myColor)];
-        myKingIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref myKingBitboard);
+        myKingBitboard = board.pieceBitboards[Piece.MakePiece(Piece.KING, myColor)];
+        myKingIndex = BitBoardHelper.GetIndexOfLSB(myKingBitboard);
 
         allPiecesBitboard = board.allPiecesBitboard;
+        emptySquaresBitboard = ~allPiecesBitboard;
 
         enPassantFile = board.gameState.enPassantFile;
 
@@ -96,16 +104,13 @@ public class MoveGen
     void CalculateAttackedSquares()
     {
         ulong pawnsBitboard = board.pieceBitboards[Piece.MakePiece(Piece.PAWN, opponentColor)];
-        while (pawnsBitboard != 0)
+        ulong leftAttacks = BitBoardHelper.shiftLeft(pawnsBitboard, -pushOffset - 1) & ~BitBoardHelper.fileH;
+        ulong rightAttacks = BitBoardHelper.shiftLeft(pawnsBitboard, -pushOffset + 1) & ~BitBoardHelper.fileA;
+        attackedSquares = leftAttacks | rightAttacks;
+        if ((attackedSquares & myKingBitboard) != 0)
         {
-            int pawnIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref pawnsBitboard);
-            ulong targetSquares = PrecomputedData.PawnAttacks(pawnIndex, opponentColor);
-            if (BitBoardHelper.IsBitSet(targetSquares, myKingIndex))
-            {
-                inCheck = true;
-                checkBlock = BitBoardHelper.Index(pawnIndex);
-            }
-            attackedSquares |= targetSquares;
+            inCheck = true;
+            checkBlock = pawnsBitboard & PrecomputedData.PawnAttacks(myKingIndex, myColor);
         }
 
         ulong knightsBitboard = board.pieceBitboards[Piece.MakePiece(Piece.KNIGHT, opponentColor)];
@@ -113,7 +118,7 @@ public class MoveGen
         {
             int knightIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref knightsBitboard);
             ulong targetSquares = PrecomputedData.knightMoves[knightIndex];
-            if (BitBoardHelper.IsBitSet(targetSquares, myKingIndex))
+            if ((targetSquares & myKingBitboard) != 0)
             {
                 inCheck = true;
                 checkBlock = BitBoardHelper.Index(knightIndex);
@@ -122,32 +127,24 @@ public class MoveGen
         }
 
         // Prevent that the king moves to a square attacked by a slider because the king blocked that square
-        ulong myKingBitboard = board.pieceBitboards[Piece.MakePiece(Piece.KING, myColor)];
         ulong allPiecesBitboardWithoutMyKing = allPiecesBitboard ^ myKingBitboard;
 
-        ulong bishopsBitboard = board.pieceBitboards[Piece.MakePiece(Piece.BISHOP, opponentColor)];
-        while (bishopsBitboard != 0)
+        ulong diagonalSliders = opponentDiagonalSliders;
+        while (diagonalSliders != 0)
         {
-            int bishopIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref bishopsBitboard);
-            attackedSquares |= PrecomputedData.BishopMoves(bishopIndex, allPiecesBitboardWithoutMyKing);
+            int diagonalIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref diagonalSliders);
+            attackedSquares |= PrecomputedData.BishopMoves(diagonalIndex, allPiecesBitboardWithoutMyKing);
         }
 
-        ulong rooksBitboard = board.pieceBitboards[Piece.MakePiece(Piece.ROOK, opponentColor)];
-        while (rooksBitboard != 0)
+        ulong orthogonalSliders = opponentOrthogonalSliders;
+        while (orthogonalSliders != 0)
         {
-            int rookIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref rooksBitboard);
-            attackedSquares |= PrecomputedData.RookMoves(rookIndex, allPiecesBitboardWithoutMyKing);
-        }
-
-        ulong queensBitboard = board.pieceBitboards[Piece.MakePiece(Piece.QUEEN, opponentColor)];
-        while (queensBitboard != 0)
-        {
-            int queenIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref queensBitboard);
-            attackedSquares |= PrecomputedData.RookMoves(queenIndex, allPiecesBitboardWithoutMyKing) | PrecomputedData.BishopMoves(queenIndex, allPiecesBitboardWithoutMyKing);
+            int orthogonalIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref orthogonalSliders);
+            attackedSquares |= PrecomputedData.RookMoves(orthogonalIndex, allPiecesBitboardWithoutMyKing);
         }
 
         ulong opponentKingBitboard = board.pieceBitboards[Piece.MakePiece(Piece.KING, opponentColor)];
-        int opponentKingIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref opponentKingBitboard);
+        int opponentKingIndex = BitBoardHelper.GetIndexOfLSB(opponentKingBitboard);
         attackedSquares |= PrecomputedData.kingMoves[opponentKingIndex];
     }
 
@@ -169,9 +166,10 @@ public class MoveGen
             bool diagonal = dir > 3 ? true : false;
 
             ulong sliderPieces = diagonal ? opponentDiagonalSliders : opponentOrthogonalSliders;
-            ulong pinnedMask = 0;
 
             if ((xray & sliderPieces) == 0) continue; // No slider in this direction
+
+            ulong pinnedMask = 0;
 
             // Step over xray
             int stepOfset = BoardHelper.directions[dir];
@@ -218,26 +216,24 @@ public class MoveGen
 
     void PawnMoves(ref Span<Move> moves)
     {
-        int pushOffset = whiteToMove ? 8 : -8;
-
         ulong pawnsBitboard = board.pieceBitboards[Piece.MakePiece(Piece.PAWN, myColor)];
 
-        ulong singlePush = BitBoardHelper.shiftLeft(pawnsBitboard, pushOffset) & ~allPiecesBitboard;
-        ulong doublePush = BitBoardHelper.shiftLeft(singlePush, pushOffset) & ~allPiecesBitboard & (whiteToMove ? BitBoardHelper.rank4 : BitBoardHelper.rank5);
+        ulong singlePush = BitBoardHelper.shiftLeft(pawnsBitboard, pushOffset) & emptySquaresBitboard;
+        ulong doublePush = BitBoardHelper.shiftLeft(singlePush, pushOffset) & emptySquaresBitboard & (whiteToMove ? BitBoardHelper.rank4 : BitBoardHelper.rank5);
         singlePush &= checkBlock;
         doublePush &= checkBlock;
-        ulong singlePushNoPromotion = singlePush & ~BitBoardHelper.rank1 & ~BitBoardHelper.rank8;
-        ulong singlePushPromotion = singlePush & (BitBoardHelper.rank1 | BitBoardHelper.rank8);
+        ulong singlePushNoPromotion = singlePush & BitBoardHelper.NOT_PROMOTION_RANKS;
+        ulong singlePushPromotion = singlePush & BitBoardHelper.PROMOTION_RANKS;
 
         ulong capturesLeft = BitBoardHelper.shiftLeft(pawnsBitboard, pushOffset - 1) & ~BitBoardHelper.fileH & opponentPiecesBitboard;
         capturesLeft &= checkBlock;
-        ulong capturesLeftNoPromotion = capturesLeft & ~BitBoardHelper.rank1 & ~BitBoardHelper.rank8;
-        ulong capturesLeftPromotion = capturesLeft & (BitBoardHelper.rank1 | BitBoardHelper.rank8);
+        ulong capturesLeftNoPromotion = capturesLeft & BitBoardHelper.NOT_PROMOTION_RANKS;
+        ulong capturesLeftPromotion = capturesLeft & BitBoardHelper.PROMOTION_RANKS;
 
         ulong capturesRight = BitBoardHelper.shiftLeft(pawnsBitboard, pushOffset + 1) & ~BitBoardHelper.fileA & opponentPiecesBitboard;
         capturesRight &= checkBlock;
-        ulong capturesRightNoPromotion = capturesRight & ~BitBoardHelper.rank1 & ~BitBoardHelper.rank8;
-        ulong capturesRightPromotion = capturesRight & (BitBoardHelper.rank1 | BitBoardHelper.rank8);
+        ulong capturesRightNoPromotion = capturesRight & BitBoardHelper.NOT_PROMOTION_RANKS;
+        ulong capturesRightPromotion = capturesRight & BitBoardHelper.PROMOTION_RANKS;
 
         // Single push / double push
         if (generateQuietMoves)
@@ -247,7 +243,7 @@ public class MoveGen
                 int targetIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref singlePushNoPromotion);
                 int startIndex = targetIndex - pushOffset;
                 // Add move if pawn not pinned or if move is along the pin direction
-                if (!BitBoardHelper.IsBitSet(pinnedPieces, startIndex) || (PrecomputedData.alignMask[myKingIndex, startIndex] == PrecomputedData.alignMask[myKingIndex, targetIndex]))
+                if (BitBoardHelper.IsBitSet(notPinnedPieces, startIndex) || (PrecomputedData.alignMask[myKingIndex, startIndex] == PrecomputedData.alignMask[myKingIndex, targetIndex]))
                     moves[numberOfMoves++] = new Move(startIndex, targetIndex, Move.QUIET_MOVE);
             }
             while (doublePush != 0)
@@ -255,7 +251,7 @@ public class MoveGen
                 int targetIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref doublePush);
                 int startIndex = targetIndex - 2 * pushOffset;
                 // Add move if pawn not pinned or if move is along the pin direction
-                if (!BitBoardHelper.IsBitSet(pinnedPieces, startIndex) || (PrecomputedData.alignMask[myKingIndex, startIndex] == PrecomputedData.alignMask[myKingIndex, targetIndex]))
+                if (BitBoardHelper.IsBitSet(notPinnedPieces, startIndex) || (PrecomputedData.alignMask[myKingIndex, startIndex] == PrecomputedData.alignMask[myKingIndex, targetIndex]))
                     moves[numberOfMoves++] = new Move(startIndex, targetIndex, Move.DOUBLE_PAWN_PUSH);
             }
         }
@@ -266,7 +262,7 @@ public class MoveGen
             int targetIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref singlePushPromotion);
             int startIndex = targetIndex - pushOffset;
             // Add move if pawn not pinned
-            if (!BitBoardHelper.IsBitSet(pinnedPieces, startIndex))
+            if (BitBoardHelper.IsBitSet(notPinnedPieces, startIndex))
             {
                 moves[numberOfMoves++] = new Move(startIndex, targetIndex, Move.QUEEN_PROMOTION);
                 moves[numberOfMoves++] = new Move(startIndex, targetIndex, Move.ROOK_PROMOTION);
@@ -280,7 +276,7 @@ public class MoveGen
             int targetIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref capturesLeftPromotion);
             int startIndex = targetIndex - pushOffset + 1;
             // Add move if pawn not pinned
-            if (!BitBoardHelper.IsBitSet(pinnedPieces, startIndex))
+            if (BitBoardHelper.IsBitSet(notPinnedPieces, startIndex))
             {
                 moves[numberOfMoves++] = new Move(startIndex, targetIndex, Move.QUEEN_PROMOTION_CAPTURE);
                 moves[numberOfMoves++] = new Move(startIndex, targetIndex, Move.ROOK_PROMOTION_CAPTURE);
@@ -293,7 +289,7 @@ public class MoveGen
             int targetIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref capturesRightPromotion);
             int startIndex = targetIndex - pushOffset - 1;
             // Add move if pawn not pinned
-            if (!BitBoardHelper.IsBitSet(pinnedPieces, startIndex))
+            if (BitBoardHelper.IsBitSet(notPinnedPieces, startIndex))
             {
                 moves[numberOfMoves++] = new Move(startIndex, targetIndex, Move.QUEEN_PROMOTION_CAPTURE);
                 moves[numberOfMoves++] = new Move(startIndex, targetIndex, Move.ROOK_PROMOTION_CAPTURE);
@@ -307,7 +303,7 @@ public class MoveGen
             int targetIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref capturesLeftNoPromotion);
             int startIndex = targetIndex - pushOffset + 1;
             // Add move if pawn not pinned or if move is along the pin direction
-            if (!BitBoardHelper.IsBitSet(pinnedPieces, startIndex) || (PrecomputedData.alignMask[myKingIndex, startIndex] == PrecomputedData.alignMask[myKingIndex, targetIndex]))
+            if (BitBoardHelper.IsBitSet(notPinnedPieces, startIndex) || (PrecomputedData.alignMask[myKingIndex, startIndex] == PrecomputedData.alignMask[myKingIndex, targetIndex]))
                 moves[numberOfMoves++] = new Move(startIndex, targetIndex, Move.CAPTURE);
         }
         while (capturesRightNoPromotion != 0)
@@ -315,7 +311,7 @@ public class MoveGen
             int targetIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref capturesRightNoPromotion);
             int startIndex = targetIndex - pushOffset - 1;
             // Add move if pawn not pinned or if move is along the pin direction
-            if (!BitBoardHelper.IsBitSet(pinnedPieces, startIndex) || (PrecomputedData.alignMask[myKingIndex, startIndex] == PrecomputedData.alignMask[myKingIndex, targetIndex]))
+            if (BitBoardHelper.IsBitSet(notPinnedPieces, startIndex) || (PrecomputedData.alignMask[myKingIndex, startIndex] == PrecomputedData.alignMask[myKingIndex, targetIndex]))
                 moves[numberOfMoves++] = new Move(startIndex, targetIndex, Move.CAPTURE);
         }
 
@@ -330,7 +326,7 @@ public class MoveGen
             {
                 int startIndex = BitBoardHelper.ClearAndGetIndexOfLSB(ref pawnsThatCanCaptureEnPassent);
                 // Add move if pawn not pinned or if move is along the pin direction
-                if (!BitBoardHelper.IsBitSet(pinnedPieces, startIndex) || (PrecomputedData.alignMask[myKingIndex, startIndex] == PrecomputedData.alignMask[myKingIndex, moveToIndex]))
+                if (BitBoardHelper.IsBitSet(notPinnedPieces, startIndex) || (PrecomputedData.alignMask[myKingIndex, startIndex] == PrecomputedData.alignMask[myKingIndex, moveToIndex]))
                     // Check if en passent does not result in check
                     if (!InCheckAfterEnPassent(startIndex, moveToIndex, capturedPawnIndex))
                         moves[numberOfMoves++] = new Move(startIndex, moveToIndex, Move.EN_PASSANT);
@@ -351,7 +347,7 @@ public class MoveGen
     {
         ulong knightsBitboard = board.pieceBitboards[Piece.MakePiece(Piece.KNIGHT, myColor)];
 
-        knightsBitboard &= ~pinnedPieces; // Remove pinned knights
+        knightsBitboard &= notPinnedPieces; // Remove pinned knights
 
         while (knightsBitboard != 0)
         {
@@ -375,7 +371,7 @@ public class MoveGen
         if (inCheck)
         {
             // When in check, pinned bishops can not move
-            bishopsBitboard &= ~pinnedPieces;
+            bishopsBitboard &= notPinnedPieces;
         }
         while (bishopsBitboard != 0)
         {
@@ -408,7 +404,7 @@ public class MoveGen
         if (inCheck)
         {
             // When in check, pinned rooks can not move
-            rooksBitboard &= ~pinnedPieces;
+            rooksBitboard &= notPinnedPieces;
         }
         while (rooksBitboard != 0)
         {
@@ -441,7 +437,7 @@ public class MoveGen
         if (inCheck)
         {
             // When in check, pinned rooks can not move
-            queensBitboard &= ~pinnedPieces;
+            queensBitboard &= notPinnedPieces;
         }
         while (queensBitboard != 0)
         {
