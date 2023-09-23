@@ -152,20 +152,11 @@ public class Searcher
             }
             else
             {
-                int depthReduction;
-                // No pricipal variation
-                if (movesSearched < 5 || depth < 3)
-                    depthReduction = 0;
-                else
-                    // Late move reduction 
-                    // using Sempa's formula: reduce by 1 ply for the first 6 moves, then by depth/3
-                    depthReduction = movesSearched < 11 ? 1 : (depth / 3);
-
-                eval = -NullWindowSearch(alpha, depth - 1 - depthReduction, ply + 1);
+                eval = -NullWindowSearch(alpha, depth - 1, ply + 1);
                 if (eval > alpha)
                 {
                     // Null window failed
-                    eval = -NegaMax(-beta, -alpha, depth - 1 - depthReduction, ply + 1);
+                    eval = -NegaMax(-beta, -alpha, depth - 1, ply + 1);
                 }
             }
             board.UndoMove(move);
