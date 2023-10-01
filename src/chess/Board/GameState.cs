@@ -57,4 +57,9 @@ public readonly struct GameState
     {
         return (castlingRights & (whiteToMove ? 0b100 : 0b1)) != 0;
     }
+
+    public bool CanCastle(int color)
+    {
+        return (castlingRights & (color == Piece.WHITE ? 0b1100 : 0b11)) != 0;
+    }
 }

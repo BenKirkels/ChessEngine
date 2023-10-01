@@ -92,6 +92,15 @@ public static class PieceSquareTables
         -50,-30,-30,-30,-30,-30,-30,-50
     };
 
+    static readonly int[][] middleGame = { Pawns, Knights, Bishops, Rooks, Queens, King };
+    static readonly int[][] endGame = { PawnsEnd, Knights, Bishops, Rooks, Queens, KingEnd };
+
+    public static int GetValue(int PieceType, int index, bool EndGame, bool isWhite)
+    {
+        index = isWhite ? index ^ 56 : index;
+        return EndGame ? endGame[PieceType - 1][index] : middleGame[PieceType - 1][index];
+    }
+
     public static int Read(int[] table, int index, bool isWhite)
     {
         return isWhite ? table[index ^ 56] : table[index];

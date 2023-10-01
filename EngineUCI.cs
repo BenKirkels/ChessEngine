@@ -1,4 +1,5 @@
 using Chess;
+using Evaluation;
 using MoveGeneration;
 using Search;
 namespace ChessEngine;
@@ -52,6 +53,7 @@ public class EngineUCI
         // Call static classes to calculate precomputed data
         PrecomputedData.RookMoves(0, 0);
         Zobrist.GenerateZobristKey(new ulong[Piece.MAX_PIECE_NUMBER + 1], 0, 0, true);
+        _ = PawnMasks.passedPawn[0, 0];
     }
 
     // Format: 'position startpos moves e2e4 e7e5'

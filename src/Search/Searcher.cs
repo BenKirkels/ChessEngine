@@ -56,15 +56,17 @@ public class Searcher
 
             // Check if we have run out of time
             if (TimeUp)
+            {
+                searchInfo.depth = depth;
+                PrintSearchInfo();
                 break;
+            }
 
             // Check if we are in aspiration window and increase depth if we are
             // Otherwise widen the window and try again
             if (InAspirationWindow(eval, ref alpha, ref beta, ref numberOfAspirationFails))
             {
-                searchInfo.score = eval;
                 searchInfo.depth = depth;
-
                 PrintSearchInfo();
                 depth++;
             }
@@ -140,9 +142,6 @@ public class Searcher
         Move bestMove = Move.NullMove;
         foreach (Move move in moves)
         {
-            if (TimeUp)
-                return INFINITY;
-
             board.MakeMove(move);
 
             if (movesSearched++ == 0)
@@ -152,14 +151,17 @@ public class Searcher
             }
             else
             {
-                eval = -NullWindowSearch(alpha, depth - 1, ply + 1);
-                if (eval > alpha)
+                eval = -NegaMax(-alpha - 1, -alpha, depth - 1, ply + 1);
+                if (eval > alpha && eval < beta)
                 {
                     // Null window failed
                     eval = -NegaMax(-beta, -alpha, depth - 1, ply + 1);
                 }
             }
             board.UndoMove(move);
+
+            if (TimeUp)
+                return INFINITY;
 
             if (eval > bestEval)
             {
@@ -168,7 +170,11 @@ public class Searcher
                 {
                     alpha = bestEval;
                     bestMove = move;
-                    if (isRoot) BestMoveRoot = move;
+                    if (isRoot)
+                    {
+                        BestMoveRoot = move;
+                        searchInfo.score = bestEval;
+                    }
                 }
 
                 if (alpha >= beta) // fail high
@@ -189,16 +195,11 @@ public class Searcher
         return bestEval;
     }
 
-    int NullWindowSearch(int alpha, int depth, int ply)
-    {
-        return NegaMax(-alpha - 1, -alpha, depth, ply);
-    }
-
     int QuiescenceSearch(int alpha, int beta)
     {
         searchInfo.nodes++;
 
-        int staticEval = Evaluator.Evaluate(board);
+        int staticEval = Evaluator.Evaluate();
 
         if (staticEval >= beta) return beta;
         if (staticEval > alpha) alpha = staticEval;
@@ -210,7 +211,6 @@ public class Searcher
         {
             if (TimeUp)
                 return INFINITY;
-
             board.MakeMove(move);
             int eval = -QuiescenceSearch(-beta, -alpha);
             board.UndoMove(move);
@@ -236,7 +236,7 @@ public class Searcher
         BestMoveRoot = Move.NullMove;
         transpositionTable = new TranspositionTable(board);
         stopwatch = new Stopwatch();
-        Evaluator = new Evaluator();
+        Evaluator = new Evaluator(board);
         moveOrdener = new(board);
     }
 

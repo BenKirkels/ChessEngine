@@ -43,4 +43,6 @@ public static class Piece
     public static int MakePiece(int pieceType, bool whitePiece) => pieceType | (whitePiece ? WHITE : BLACK);
 
     public static int PieceType(int piece) => piece & PIECE_TYPE_MASK;
+    public static bool IsWhite(int piece) => (piece & COLOR_MASK) == WHITE;
+    public static int Color(int piece) => piece & COLOR_MASK;
 }
