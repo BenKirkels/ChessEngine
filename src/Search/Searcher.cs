@@ -96,7 +96,7 @@ public class Searcher
         return false;
     }
 
-    int NegaMax(int alpha, int beta, int depth, int ply, bool pvNode = false)
+    int NegaMax(int alpha, int beta, int depth, int ply)
     {
         searchInfo.nodes++;
         int eval;
@@ -107,7 +107,8 @@ public class Searcher
             return eval;
         }
 
-        bool isRoot = ply == 0;
+        bool isRoot = ply == 0,
+             pvNode = beta - alpha > 1;
 
         // Check extension
         if (board.InCheck()) depth++;
@@ -120,7 +121,7 @@ public class Searcher
             }
 
             // Transposition table
-            if (transpositionTable.TryGetEvaluation(alpha, beta, depth, pvNode, out eval))
+            if (transpositionTable.TryGetEvaluation(alpha, beta, depth, out eval)) // References contain !pvNode
             {
                 searchInfo.tbhits++;
                 return eval;
@@ -147,7 +148,7 @@ public class Searcher
             if (movesSearched++ == 0)
             {
                 // Principal variation
-                eval = -NegaMax(-beta, -alpha, depth - 1, ply + 1, true);
+                eval = -NegaMax(-beta, -alpha, depth - 1, ply + 1);
             }
             else
             {

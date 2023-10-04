@@ -35,7 +35,7 @@ public class TranspositionTable
 
     ulong index => board.gameState.zobristKey % (ulong)numberOfEntriesPerTable;
 
-    public bool TryGetEvaluation(int alpha, int beta, int depth, bool pvNode, out int eval)
+    public bool TryGetEvaluation(int alpha, int beta, int depth, out int eval)
     {
         TranspostionEntry entry = table[index];
 
@@ -47,13 +47,13 @@ public class TranspositionTable
                 return true;
             }
 
-            if (entry.flag == TranspostionEntry.LOWERBOUND && entry.score >= beta && !pvNode)
+            if (entry.flag == TranspostionEntry.LOWERBOUND && entry.score >= beta)
             {
                 eval = entry.score;
                 return true;
             }
 
-            if (entry.flag == TranspostionEntry.UPPERBOUND && entry.score <= alpha && !pvNode)
+            if (entry.flag == TranspostionEntry.UPPERBOUND && entry.score <= alpha)
             {
                 eval = entry.score;
                 return true;
